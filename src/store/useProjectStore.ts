@@ -31,7 +31,7 @@ export interface Asset {
 export interface TimelineTransition {
   id: string;
   type: TransitionType;
-  duration: number; // seconds (0.25 - 3.0)
+  duration: number;
   fromClipId: string;
   toClipId: string;
 }
@@ -110,11 +110,17 @@ interface ProjectStore {
   removeClip: (id: string) => void;
   duplicateClip: (id: string) => void;
 
-  // Transitions
   addTransition: (transition: Omit<TimelineTransition, 'id'>) => void;
   updateTransition: (id: string, updates: Partial<Omit<TimelineTransition, 'id'>>) => void;
   removeTransition: (id: string) => void;
   getTransitionBetween: (clipAId: string, clipBId: string) => TimelineTransition | undefined;
+
+  addMarker: (marker: Omit<TimelineMarker, 'id'>) => void;
+  removeMarker: (id: string) => void;
+  updateMarker: (id: string, updates: Partial<Omit<TimelineMarker, 'id'>>) => void;
+
+  projectSettings: ProjectSettings;
+  updateProjectSettings: (updates: Partial<ProjectSettings>) => void;
 
   logs: LogEntry[];
   addLog: (level: LogLevel, message: string) => void;
@@ -205,15 +211,10 @@ export const useProjectStore = create<ProjectStore>()(
       duplicateClip: (id) => set((s) => {
         const clip = s.timeline.clips.find((c) => c.id === id);
         if (clip) {
-          s.timeline.clips.push({
-            ...clip,
-            id: uuid(),
-            startTime: clip.startTime + clip.duration,
-          });
+          s.timeline.clips.push({ ...clip, id: uuid(), startTime: clip.startTime + clip.duration });
         }
       }),
 
-      // Transitions
       addTransition: (transition) => set((s) => {
         s.timeline.transitions = s.timeline.transitions.filter(
           (t) => !(t.fromClipId === transition.fromClipId && t.toClipId === transition.toClipId)
@@ -233,7 +234,6 @@ export const useProjectStore = create<ProjectStore>()(
         );
       },
 
-      // Markers
       addMarker: (marker) => set((s) => {
         s.timeline.markers.push({ ...marker, id: uuid() });
       }),
@@ -245,7 +245,6 @@ export const useProjectStore = create<ProjectStore>()(
         if (idx !== -1) Object.assign(s.timeline.markers[idx], updates);
       }),
 
-      // Project settings
       projectSettings: {
         resolution: { width: 1920, height: 1080 },
         fps: 30,
@@ -301,107 +300,7 @@ export const useProjectStore = create<ProjectStore>()(
         const { scenes, timeline, assets, projectTitle, brief, projectSettings } = state;
         return { scenes, timeline, assets, projectTitle, brief, projectSettings };
       },
-      equality: (pastState, currentState) => 
-        JSON.stringify(pastState) === JSON.stringify(currentState),
-    }
-  )
-);
-      setPlayhead: (pos) => set((s) => { s.timeline.playheadPosition = pos; }),
-      setZoom: (zoom) => set((s) => { s.timeline.zoom = zoom; }),
-      togglePlay: () => set((s) => { s.timeline.isPlaying = !s.timeline.isPlaying; }),
-      addClip: (clip) => {
-        const id = uuid();
-        set((s) => { s.timeline.clips.push({ ...clip, id }); });
-        return id;
-      },
-      updateClip: (id, updates) => set((s) => {
-        const idx = s.timeline.clips.findIndex((c) => c.id === id);
-        if (idx !== -1) Object.assign(s.timeline.clips[idx], updates);
-      }),
-      removeClip: (id) => set((s) => {
-        s.timeline.clips = s.timeline.clips.filter((c) => c.id !== id);
-        // Also remove transitions referencing this clip
-        s.timeline.transitions = s.timeline.transitions.filter(
-          (t) => t.fromClipId !== id && t.toClipId !== id
-        );
-      }),
-      duplicateClip: (id) => set((s) => {
-        const clip = s.timeline.clips.find((c) => c.id === id);
-        if (clip) {
-          s.timeline.clips.push({
-            ...clip,
-            id: uuid(),
-            startTime: clip.startTime + clip.duration,
-          });
-        }
-      }),
-
-      // Transitions
-      addTransition: (transition) => set((s) => {
-        // Remove existing transition between same clips
-        s.timeline.transitions = s.timeline.transitions.filter(
-          (t) => !(t.fromClipId === transition.fromClipId && t.toClipId === transition.toClipId)
-        );
-        s.timeline.transitions.push({ ...transition, id: uuid() });
-      }),
-      updateTransition: (id, updates) => set((s) => {
-        const idx = s.timeline.transitions.findIndex((t) => t.id === id);
-        if (idx !== -1) Object.assign(s.timeline.transitions[idx], updates);
-      }),
-      removeTransition: (id) => set((s) => {
-        s.timeline.transitions = s.timeline.transitions.filter((t) => t.id !== id);
-      }),
-      getTransitionBetween: (clipAId, clipBId) => {
-        return get().timeline.transitions.find(
-          (t) => t.fromClipId === clipAId && t.toClipId === clipBId
-        );
-      },
-
-      logs: [] as LogEntry[],
-      addLog: (level, message) =>
-        set((s) => {
-          s.logs.unshift({ id: uuid(), level, message, timestamp: new Date() });
-          if (s.logs.length > 100) s.logs.pop();
-        }),
-      clearLogs: () => set((s) => { s.logs = []; }),
-
-      chatMessages: [] as ChatMessage[],
-      addChatMessage: (msg) =>
-        set((s) => {
-          s.chatMessages.push({ ...msg, id: uuid(), timestamp: new Date() });
-        }),
-      clearChat: () => set((s) => { s.chatMessages = []; }),
-
-      brief: '',
-      setBrief: (brief) => set((s) => { s.brief = brief; }),
-      isGeneratingScript: false,
-      setGeneratingScript: (val) => set((s) => { s.isGeneratingScript = val; }),
-
-      isChatOpen: false,
-      toggleChat: () => set((s) => { s.isChatOpen = !s.isChatOpen; }),
-
-      selectedClipId: null as string | null,
-      setSelectedClipId: (id) => set((s) => { s.selectedClipId = id; s.selectedTransitionId = null; }),
-
-      selectedTransitionId: null as string | null,
-      setSelectedTransitionId: (id) => set((s) => { s.selectedTransitionId = id; s.selectedClipId = null; }),
-
-      importProject: (data) => set((s) => {
-        s.projectTitle = data.title || 'Imported Project';
-        s.brief = data.brief || '';
-        s.scenes = data.scenes || [];
-        s.timeline = data.timeline || { clips: [], transitions: [], playheadPosition: 0, zoom: 50, isPlaying: false, duration: 60 };
-        if (!s.timeline.transitions) s.timeline.transitions = [];
-        s.assets = data.assets || {};
-      }),
-    })),
-    {
-      limit: 50,
-      partialize: (state) => {
-        const { scenes, timeline, assets, projectTitle, brief } = state;
-        return { scenes, timeline, assets, projectTitle, brief };
-      },
-      equality: (pastState, currentState) => 
+      equality: (pastState, currentState) =>
         JSON.stringify(pastState) === JSON.stringify(currentState),
     }
   )
