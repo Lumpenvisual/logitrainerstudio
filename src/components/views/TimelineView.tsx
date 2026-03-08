@@ -19,6 +19,17 @@ export function TimelineView() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    // Read CSS variables for theme-aware colors
+    const root = document.documentElement;
+    const getColor = (varName: string) => {
+      const val = getComputedStyle(root).getPropertyValue(varName).trim();
+      return val ? `hsl(${val})` : '#888';
+    };
+    const colorCard = getColor('--card');
+    const colorBorder = getColor('--border');
+    const colorMutedFg = getColor('--muted-foreground');
+    const colorPrimary = getColor('--primary');
+
     const dpr = window.devicePixelRatio || 1;
     canvas.width = totalWidth * dpr;
     canvas.height = 36 * dpr;
@@ -26,7 +37,7 @@ export function TimelineView() {
     canvas.style.height = '36px';
     ctx.scale(dpr, dpr);
 
-    ctx.fillStyle = 'hsl(222.2, 47.4%, 11.2%)';
+    ctx.fillStyle = colorCard;
     ctx.fillRect(0, 0, totalWidth, 36);
 
     for (let sec = 0; sec <= timeline.duration; sec++) {
@@ -35,13 +46,13 @@ export function TimelineView() {
 
       if (isMajor) {
         ctx.beginPath();
-        ctx.strokeStyle = 'hsl(215, 20.2%, 40%)';
+        ctx.strokeStyle = colorBorder;
         ctx.lineWidth = 1;
         ctx.moveTo(x, 18);
         ctx.lineTo(x, 36);
         ctx.stroke();
 
-        ctx.fillStyle = 'hsl(215, 20.2%, 65.1%)';
+        ctx.fillStyle = colorMutedFg;
         ctx.font = '10px JetBrains Mono, monospace';
         ctx.textAlign = 'center';
         const m = Math.floor(sec / 60);
@@ -49,7 +60,7 @@ export function TimelineView() {
         ctx.fillText(`${m}:${s.toString().padStart(2, '0')}`, x, 14);
       } else if (pxPerSec > 30) {
         ctx.beginPath();
-        ctx.strokeStyle = 'hsl(215, 25%, 22%)';
+        ctx.strokeStyle = colorBorder;
         ctx.lineWidth = 0.5;
         ctx.moveTo(x, 28);
         ctx.lineTo(x, 36);
@@ -59,7 +70,7 @@ export function TimelineView() {
 
     const px = timeline.playheadPosition * pxPerSec;
     ctx.beginPath();
-    ctx.fillStyle = 'hsl(239, 84%, 67%)';
+    ctx.fillStyle = colorPrimary;
     ctx.moveTo(px - 6, 0);
     ctx.lineTo(px + 6, 0);
     ctx.lineTo(px + 3, 8);
@@ -68,7 +79,7 @@ export function TimelineView() {
     ctx.fill();
 
     ctx.beginPath();
-    ctx.strokeStyle = 'hsl(239, 84%, 67%)';
+    ctx.strokeStyle = colorPrimary;
     ctx.lineWidth = 2;
     ctx.moveTo(px, 8);
     ctx.lineTo(px, 36);
