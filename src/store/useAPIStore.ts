@@ -50,15 +50,6 @@ export const useAPIStore = create<APIStore>()(
         s.avgLatency = successLogs.length > 0
           ? Math.round(successLogs.reduce((a, l) => a + l.latencyMs, 0) / successLogs.length)
           : 0;
-
-        // Trigger alert evaluation (fire-and-forget, outside immer)
-        const model = getModelById(log.model);
-        const providerId = model?.provider || log.model.split('/')[0] || 'unknown';
-        setTimeout(() => {
-          const userId = document.cookie.match(/sb-.*-auth-token/)?.[0] ? undefined : undefined;
-          // We'll use a global user id approach — the alert store's evaluateCall needs userId
-          // This is handled by the component layer passing userId
-        }, 0);
       }),
     clearCallLogs: () =>
       set((s) => { s.callLogs = []; s.totalCalls = 0; s.totalErrors = 0; s.avgLatency = 0; }),
