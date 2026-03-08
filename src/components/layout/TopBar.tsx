@@ -183,7 +183,37 @@ export function TopBar({ onOpenAPIPanel, onSave }: { onOpenAPIPanel: () => void;
           <Download className="h-3 w-3" />
           <span className="hidden md:inline text-[10px] font-mono">Export</span>
         </button>
-        {/* API Settings */}
+
+        {/* Import JSON */}
+        <button
+          onClick={() => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = async (e) => {
+              const file = (e.target as HTMLInputElement).files?.[0];
+              if (!file) return;
+              try {
+                const text = await file.text();
+                const data = JSON.parse(text);
+                if (data.project) {
+                  useProjectStore.getState().importProject(data.project);
+                  toast.success('Project imported successfully');
+                } else {
+                  toast.error('Invalid project file');
+                }
+              } catch {
+                toast.error('Failed to parse JSON file');
+              }
+            };
+            input.click();
+          }}
+          className="flex items-center gap-1.5 rounded-md border border-border/50 px-2.5 py-1.5 text-xs text-muted-foreground transition-all hover:border-primary/30 hover:text-primary"
+          title="Import project from JSON"
+        >
+          <Upload className="h-3 w-3" />
+          <span className="hidden md:inline text-[10px] font-mono">Import</span>
+        </button>
         <button
           onClick={onOpenAPIPanel}
           className="flex items-center gap-1.5 rounded-md border border-border/50 px-2.5 py-1.5 text-xs text-muted-foreground transition-all hover:border-primary/30 hover:text-primary"
