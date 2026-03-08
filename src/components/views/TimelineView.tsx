@@ -260,6 +260,10 @@ export function TimelineView() {
   useEffect(() => {
     if (!resizeState) return;
 
+    const clip = timeline.clips.find(c => c.id === resizeState.clipId);
+    const track = clip?.track || 'video';
+    const snapPoints = getSnapPoints(resizeState.clipId, track);
+
     const handleMouseMove = (e: MouseEvent) => {
       const rect = containerRef.current?.getBoundingClientRect();
       if (!rect) return;
@@ -270,18 +274,20 @@ export function TimelineView() {
       const MIN_DURATION = 0.5;
 
       if (resizeState.edge === 'left') {
-        // Dragging left edge: changes startTime and duration
         const maxNewStart = resizeState.originalStartTime + resizeState.originalDuration - MIN_DURATION;
-        const newStart = Math.max(0, Math.min(mouseTime, maxNewStart));
-        const snappedStart = Math.round(newStart * 4) / 4;
-        const newDuration = resizeState.originalDuration + (resizeState.originalStartTime - snappedStart);
-        setResizePreview({ startTime: snappedStart, duration: Math.max(MIN_DURATION, newDuration) });
+        const rawStart = Math.max(0, Math.min(mouseTime, maxNewStart));
+        const { snapped: snappedStart, didSnap } = trySnap(rawStart, snapPoints);
+        const finalStart = didSnap ? snappedStart : Math.round(rawStart * 4) / 4;
+        const newDuration = resizeState.originalDuration + (resizeState.originalStartTime - finalStart);
+        setSnapLine(didSnap ? finalStart : null);
+        setResizePreview({ startTime: finalStart, duration: Math.max(MIN_DURATION, newDuration) });
       } else {
-        // Dragging right edge: changes duration only
-        const endTime = mouseTime;
-        const newDuration = endTime - resizeState.originalStartTime;
-        const snappedDuration = Math.round(Math.max(MIN_DURATION, newDuration) * 4) / 4;
-        setResizePreview({ startTime: resizeState.originalStartTime, duration: snappedDuration });
+        const rawEnd = mouseTime;
+        const { snapped: snappedEnd, didSnap } = trySnap(rawEnd, snapPoints);
+        const finalEnd = didSnap ? snappedEnd : Math.round(rawEnd * 4) / 4;
+        const newDuration = finalEnd - resizeState.originalStartTime;
+        setSnapLine(didSnap ? finalEnd : null);
+        setResizePreview({ startTime: resizeState.originalStartTime, duration: Math.max(MIN_DURATION, newDuration) });
       }
     };
 
@@ -295,6 +301,7 @@ export function TimelineView() {
       }
       setResizeState(null);
       setResizePreview(null);
+      setSnapLine(null);
     };
 
     window.addEventListener('mousemove', handleMouseMove);
@@ -303,7 +310,7 @@ export function TimelineView() {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [resizeState, resizePreview, pxPerSec, updateClip, addLog]);
+  }, [resizeState, resizePreview, pxPerSec, timeline.clips, updateClip, addLog, getSnapPoints, trySnap]);
 
   const handleRulerClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const rect = rulerRef.current?.getBoundingClientRect();
