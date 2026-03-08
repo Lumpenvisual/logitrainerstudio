@@ -476,6 +476,3 @@ export function APIManagementPanel({ onClose }: { onClose: () => void }) {
     </motion.div>
   );
 }
-
-  );
-}
