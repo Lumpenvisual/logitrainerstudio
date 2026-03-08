@@ -33,6 +33,9 @@ export interface TimelineClip {
   track: 'video' | 'audio';
   startTime: number;
   duration: number;
+  name?: string;
+  opacity?: number;   // 0-100, default 100
+  volume?: number;    // 0-100, default 100
 }
 
 export interface TimelineState {
