@@ -1,31 +1,34 @@
 import { useProjectStore } from '@/store/useProjectStore';
-import { Sparkles, Film, Clock, Image, Mic, Video, Loader2, Pencil } from 'lucide-react';
+import { useAPIStore } from '@/store/useAPIStore';
+import { Sparkles, Film, Clock, Image, Mic, Video, Loader2, Pencil, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useState } from 'react';
-
-const SAMPLE_SCENES = [
-  { sceneNumber: 1, sceneType: 'Establishing', durationTargetSec: 8, visualPrompt: 'Wide aerial shot of a neon-lit cyberpunk cityscape at dusk. Rain-slicked streets reflect holographic advertisements.', voiceOverScript: 'In a world where technology meets artistry, a new kind of coffee experience awaits.' },
-  { sceneNumber: 2, sceneType: 'Interior', durationTargetSec: 6, visualPrompt: 'Close-up of a robotic barista arm precisely pouring latte art. Steam rises, illuminated by violet neon strips.', voiceOverScript: 'Precision-brewed by AI. Every cup is a masterpiece of flavor engineering.' },
-  { sceneNumber: 3, sceneType: 'Detail', durationTargetSec: 5, visualPrompt: 'Macro shot of coffee beans floating in zero-gravity inside a glass container. Holographic data readouts surround them.', voiceOverScript: 'Our beans are sourced from the finest quantum-verified farms across three continents.' },
-  { sceneNumber: 4, sceneType: 'Closing', durationTargetSec: 6, visualPrompt: 'A satisfied customer in a sleek booth, holographic menu dissolving. The coffee shop logo glows on the window.', voiceOverScript: 'NeuroBrew. The future of coffee is now.' },
-];
+import { generateScript } from '@/services/aiService';
+import { getModelById } from '@/services/apiRegistry';
 
 export function ArchitectView() {
   const { brief, setBrief, scenes, addScenes, clearScenes, isGeneratingScript, setGeneratingScript, addLog } = useProjectStore();
-  const [editingScene, setEditingScene] = useState<string | null>(null);
+  const { preferences, addCallLog } = useAPIStore();
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     if (!brief.trim()) return;
     setGeneratingScript(true);
-    addLog('info', `Generating script for: "${brief}"`);
     clearScenes();
+    const model = preferences.scriptGeneration;
+    const modelInfo = getModelById(model);
+    addLog('info', `Generating script with ${modelInfo?.name || model}...`);
 
-    // Simulate AI generation
-    setTimeout(() => {
-      addScenes(SAMPLE_SCENES);
-      setGeneratingScript(false);
-      addLog('success', `Generated ${SAMPLE_SCENES.length} scenes successfully`);
-    }, 2000);
+    const result = await generateScript(brief, model, 4);
+
+    if (result.error) {
+      addLog('error', `Script generation failed: ${result.error}`);
+      addCallLog({ function: 'generate-script', model, status: 'error', latencyMs: result.latencyMs || 0, error: result.error });
+    } else if (result.data) {
+      addScenes(result.data.scenes);
+      addLog('success', `Generated ${result.data.scenes.length} scenes in ${result.latencyMs}ms`);
+      addCallLog({ function: 'generate-script', model: result.model || model, status: 'success', latencyMs: result.latencyMs || 0 });
+    }
+
+    setGeneratingScript(false);
   };
 
   return (
@@ -33,7 +36,10 @@ export function ArchitectView() {
       {/* Brief Input */}
       <div className="border-b border-border p-6">
         <h2 className="mb-1 text-lg font-semibold text-foreground">Script Architect</h2>
-        <p className="mb-4 text-sm text-muted-foreground">Describe your video concept. The AI will generate a multi-scene script.</p>
+        <p className="mb-4 text-sm text-muted-foreground">
+          Describe your video concept. AI will generate a multi-scene script using{' '}
+          <span className="text-primary font-mono text-xs">{getModelById(preferences.scriptGeneration)?.name || 'AI'}</span>
+        </p>
 
         <div className="flex gap-3">
           <div className="relative flex-1">
@@ -62,7 +68,7 @@ export function ArchitectView() {
       {/* Scenes */}
       <div className="flex-1 overflow-auto p-6">
         <AnimatePresence mode="wait">
-          {scenes.length === 0 ? (
+          {scenes.length === 0 && !isGeneratingScript ? (
             <motion.div
               key="empty"
               initial={{ opacity: 0 }}
@@ -72,6 +78,19 @@ export function ArchitectView() {
               <div className="text-center">
                 <Film className="mx-auto mb-3 h-12 w-12 text-muted-foreground/30" />
                 <p className="text-sm text-muted-foreground">No scenes yet. Enter a brief and generate your script.</p>
+              </div>
+            </motion.div>
+          ) : isGeneratingScript && scenes.length === 0 ? (
+            <motion.div
+              key="loading"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="flex h-full items-center justify-center"
+            >
+              <div className="text-center">
+                <Loader2 className="mx-auto mb-3 h-12 w-12 animate-spin text-primary" />
+                <p className="text-sm text-primary font-medium">Generating script...</p>
+                <p className="text-xs text-muted-foreground mt-1">Using {getModelById(preferences.scriptGeneration)?.name}</p>
               </div>
             </motion.div>
           ) : (
@@ -118,7 +137,6 @@ export function ArchitectView() {
                     <p className="text-sm text-foreground/60 italic leading-relaxed">"{scene.voiceOverScript}"</p>
                   </div>
 
-                  {/* Asset status badges */}
                   <div className="flex items-center gap-2 border-t border-border pt-3">
                     {(['image', 'audio', 'video'] as const).map((type) => {
                       const IconMap = { image: Image, audio: Mic, video: Video };

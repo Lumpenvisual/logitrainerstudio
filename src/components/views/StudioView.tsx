@@ -1,14 +1,18 @@
 import { useProjectStore } from '@/store/useProjectStore';
+import { useAPIStore } from '@/store/useAPIStore';
 import { Image, Mic, Video, Play, Loader2, Zap, Layers, Check, AlertCircle, Eye, Wand2 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useState } from 'react';
+import { generateImage } from '@/services/aiService';
+import { getModelById } from '@/services/apiRegistry';
 
-// Simulated image thumbnails (colored placeholders)
 const sceneColors = ['from-indigo-900/40 to-purple-900/40', 'from-cyan-900/40 to-blue-900/40', 'from-emerald-900/40 to-teal-900/40', 'from-amber-900/40 to-orange-900/40'];
 
 export function StudioView({ onOpenImageLab }: { onOpenImageLab: (sceneId: string) => void }) {
-  const { scenes, updateScene, addLog } = useProjectStore();
+  const { scenes, updateScene, addLog, addAsset } = useProjectStore();
+  const { preferences, addCallLog } = useAPIStore();
   const [generatingAssets, setGeneratingAssets] = useState<Record<string, Record<string, boolean>>>({});
+  const [sceneImages, setSceneImages] = useState<Record<string, string>>({});
 
   if (scenes.length === 0) {
     return (
@@ -21,33 +25,45 @@ export function StudioView({ onOpenImageLab }: { onOpenImageLab: (sceneId: strin
     );
   }
 
-  const simulateGenerate = (sceneId: string, type: 'image' | 'audio' | 'video') => {
-    setGeneratingAssets((prev) => ({
-      ...prev,
-      [sceneId]: { ...prev[sceneId], [type]: true },
-    }));
-    updateScene(sceneId, {
-      status: { ...scenes.find((s) => s.id === sceneId)!.status, [type]: 'generating' },
-    });
-    addLog('info', `Generating ${type} for scene ${scenes.find((s) => s.id === sceneId)?.sceneNumber}...`);
+  const generateAsset = async (sceneId: string, type: 'image' | 'audio' | 'video') => {
+    const scene = scenes.find((s) => s.id === sceneId);
+    if (!scene) return;
 
-    const delay = type === 'video' ? 4000 : type === 'audio' ? 2500 : 2000;
-    setTimeout(() => {
-      updateScene(sceneId, {
-        status: { ...scenes.find((s) => s.id === sceneId)!.status, [type]: 'ready' },
-      });
-      setGeneratingAssets((prev) => ({
-        ...prev,
-        [sceneId]: { ...prev[sceneId], [type]: false },
-      }));
-      addLog('success', `${type} ready for scene ${scenes.find((s) => s.id === sceneId)?.sceneNumber}`);
-    }, delay);
+    setGeneratingAssets((prev) => ({ ...prev, [sceneId]: { ...prev[sceneId], [type]: true } }));
+    updateScene(sceneId, { status: { ...scene.status, [type]: 'generating' } });
+
+    if (type === 'image') {
+      const model = preferences.imageGeneration;
+      addLog('info', `Generating image for scene ${scene.sceneNumber} with ${getModelById(model)?.name}...`);
+
+      const result = await generateImage(scene.visualPrompt, model);
+
+      if (result.error) {
+        addLog('error', `Image gen failed: ${result.error}`);
+        updateScene(sceneId, { status: { ...scene.status, image: 'error' } });
+        addCallLog({ function: 'generate-image', model, status: 'error', latencyMs: result.latencyMs || 0, error: result.error });
+      } else if (result.data) {
+        setSceneImages((prev) => ({ ...prev, [sceneId]: result.data!.imageUrl }));
+        const assetId = addAsset({ type: 'image', url: result.data.imageUrl, duration: 0, name: `Scene ${scene.sceneNumber} Image` });
+        updateScene(sceneId, { status: { ...scene.status, image: 'ready' }, assets: { ...scene.assets, image: assetId } });
+        addLog('success', `Image ready for scene ${scene.sceneNumber} (${result.latencyMs}ms)`);
+        addCallLog({ function: 'generate-image', model: result.model || model, status: 'success', latencyMs: result.latencyMs || 0 });
+      }
+    } else {
+      // Simulate audio/video (TTS and video gen not yet available via gateway)
+      addLog('info', `Generating ${type} for scene ${scene.sceneNumber} (simulated)...`);
+      const delay = type === 'video' ? 3000 : 2000;
+      await new Promise((r) => setTimeout(r, delay));
+      updateScene(sceneId, { status: { ...scene.status, [type]: 'ready' } });
+      addLog('success', `${type} ready for scene ${scene.sceneNumber}`);
+    }
+
+    setGeneratingAssets((prev) => ({ ...prev, [sceneId]: { ...prev[sceneId], [type]: false } }));
   };
 
   const generateAll = () => {
     scenes.forEach((scene, i) => {
-      setTimeout(() => simulateGenerate(scene.id, 'image'), i * 500);
-      setTimeout(() => simulateGenerate(scene.id, 'audio'), i * 500 + 800);
+      setTimeout(() => generateAsset(scene.id, 'image'), i * 1000);
     });
   };
 
@@ -64,14 +80,16 @@ export function StudioView({ onOpenImageLab }: { onOpenImageLab: (sceneId: strin
         <div className="flex items-center justify-between">
           <div>
             <h2 className="mb-1 text-lg font-semibold text-foreground">Asset Studio</h2>
-            <p className="text-sm text-muted-foreground">Generate and preview assets for each scene.</p>
+            <p className="text-sm text-muted-foreground">
+              Generate assets using <span className="text-primary font-mono text-xs">{getModelById(preferences.imageGeneration)?.name}</span>
+            </p>
           </div>
           <button
             onClick={generateAll}
             className="flex items-center gap-2 rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-all hover:bg-primary/90 glow-primary"
           >
             <Zap className="h-4 w-4" />
-            Generate All Assets
+            Generate All Images
           </button>
         </div>
       </div>
@@ -86,7 +104,6 @@ export function StudioView({ onOpenImageLab }: { onOpenImageLab: (sceneId: strin
               transition={{ delay: i * 0.05 }}
               className="rounded-lg border border-border bg-card overflow-hidden"
             >
-              {/* Scene header */}
               <div className="flex items-center gap-3 border-b border-border px-4 py-3 bg-surface-highlight/30">
                 <span className="flex h-7 w-7 items-center justify-center rounded bg-primary/20 text-xs font-bold text-primary font-mono">
                   {scene.sceneNumber}
@@ -106,13 +123,16 @@ export function StudioView({ onOpenImageLab }: { onOpenImageLab: (sceneId: strin
                 </div>
               </div>
 
-              {/* Scene content */}
               <div className="flex gap-4 p-4">
-                {/* Preview / Thumbnail */}
                 <div
-                  className={`relative h-36 w-64 shrink-0 rounded-md bg-gradient-to-br ${sceneColors[i % sceneColors.length]} border border-border overflow-hidden group cursor-pointer`}
+                  className={`relative h-36 w-64 shrink-0 rounded-md border border-border overflow-hidden group cursor-pointer ${
+                    sceneImages[scene.id] ? '' : `bg-gradient-to-br ${sceneColors[i % sceneColors.length]}`
+                  }`}
                   onClick={() => scene.status.image === 'ready' && onOpenImageLab(scene.id)}
                 >
+                  {sceneImages[scene.id] && (
+                    <img src={sceneImages[scene.id]} alt={`Scene ${scene.sceneNumber}`} className="absolute inset-0 w-full h-full object-cover" />
+                  )}
                   {scene.status.image === 'generating' && (
                     <div className="absolute inset-0 flex items-center justify-center bg-background/60 backdrop-blur-sm">
                       <div className="text-center">
@@ -121,50 +141,38 @@ export function StudioView({ onOpenImageLab }: { onOpenImageLab: (sceneId: strin
                       </div>
                     </div>
                   )}
-                  {scene.status.image === 'ready' && (
-                    <>
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="text-center">
-                          <Image className="mx-auto h-8 w-8 text-primary/60 mb-1" />
-                          <span className="text-[10px] font-mono text-success">Ready</span>
-                        </div>
+                  {scene.status.image === 'ready' && !sceneImages[scene.id] && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <Check className="h-8 w-8 text-success/60" />
+                    </div>
+                  )}
+                  {scene.status.image === 'ready' && sceneImages[scene.id] && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-background/60 opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm">
+                      <div className="flex gap-2">
+                        <button className="flex items-center gap-1 rounded bg-primary/20 px-2 py-1 text-[10px] font-medium text-primary">
+                          <Eye className="h-3 w-3" /> View
+                        </button>
+                        <button className="flex items-center gap-1 rounded bg-primary/20 px-2 py-1 text-[10px] font-medium text-primary">
+                          <Wand2 className="h-3 w-3" /> Edit
+                        </button>
                       </div>
-                      <div className="absolute inset-0 flex items-center justify-center bg-background/60 opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm">
-                        <div className="flex gap-2">
-                          <button className="flex items-center gap-1 rounded bg-primary/20 px-2 py-1 text-[10px] font-medium text-primary">
-                            <Eye className="h-3 w-3" /> View
-                          </button>
-                          <button className="flex items-center gap-1 rounded bg-primary/20 px-2 py-1 text-[10px] font-medium text-primary">
-                            <Wand2 className="h-3 w-3" /> Edit
-                          </button>
-                        </div>
-                      </div>
-                    </>
+                    </div>
                   )}
                   {scene.status.image === 'idle' && (
                     <div className="absolute inset-0 flex items-center justify-center">
                       <Image className="h-8 w-8 text-muted-foreground/20" />
                     </div>
                   )}
-
-                  {/* Progress bar */}
                   {scene.status.image === 'generating' && (
                     <div className="absolute bottom-0 left-0 right-0 h-1 bg-border">
-                      <motion.div
-                        className="h-full bg-primary"
-                        initial={{ width: '0%' }}
-                        animate={{ width: '90%' }}
-                        transition={{ duration: 2, ease: 'linear' }}
-                      />
+                      <motion.div className="h-full bg-primary" initial={{ width: '0%' }} animate={{ width: '90%' }} transition={{ duration: 8, ease: 'linear' }} />
                     </div>
                   )}
                 </div>
 
-                {/* Prompt & Actions */}
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-foreground/80 leading-relaxed mb-2 line-clamp-2">{scene.visualPrompt}</p>
                   <p className="text-xs text-muted-foreground/60 italic mb-4 line-clamp-1">"{scene.voiceOverScript}"</p>
-
                   <div className="flex gap-2">
                     {[
                       { type: 'image' as const, icon: Image, label: 'Image' },
@@ -176,14 +184,12 @@ export function StudioView({ onOpenImageLab }: { onOpenImageLab: (sceneId: strin
                       return (
                         <button
                           key={type}
-                          onClick={() => !isGen && simulateGenerate(scene.id, type)}
-                          disabled={isGen}
+                          onClick={() => !isGen && generateAsset(scene.id, type)}
+                          disabled={!!isGen}
                           className={`flex items-center gap-1.5 rounded-md border px-3 py-2 text-xs font-medium transition-all ${
-                            isReady
-                              ? 'border-success/30 bg-success/10 text-success'
-                              : isGen
-                              ? 'border-warning/30 bg-warning/10 text-warning cursor-wait'
-                              : 'border-border bg-secondary text-secondary-foreground hover:border-primary/30 hover:text-primary'
+                            isReady ? 'border-success/30 bg-success/10 text-success'
+                            : isGen ? 'border-warning/30 bg-warning/10 text-warning cursor-wait'
+                            : 'border-border bg-secondary text-secondary-foreground hover:border-primary/30 hover:text-primary'
                           }`}
                         >
                           {isGen ? <Loader2 className="h-3 w-3 animate-spin" /> : <Icon className="h-3 w-3" />}

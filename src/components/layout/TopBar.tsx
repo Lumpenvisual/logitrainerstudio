@@ -1,8 +1,10 @@
 import { useProjectStore } from '@/store/useProjectStore';
-import { Zap, ChevronRight } from 'lucide-react';
+import { useAPIStore } from '@/store/useAPIStore';
+import { Zap, ChevronRight, Settings2, Activity } from 'lucide-react';
 
-export function TopBar() {
+export function TopBar({ onOpenAPIPanel }: { onOpenAPIPanel: () => void }) {
   const { projectTitle, currentView, scenes } = useProjectStore();
+  const { totalCalls, avgLatency } = useAPIStore();
 
   const viewLabels: Record<string, string> = {
     architect: 'Script Architect',
@@ -32,7 +34,28 @@ export function TopBar() {
           </span>
           <span className="text-border">|</span>
           <span>{scenes.length} scenes</span>
+          {totalCalls > 0 && (
+            <>
+              <span className="text-border">|</span>
+              <span className="flex items-center gap-1">
+                <Activity className="h-3 w-3" />
+                {totalCalls} calls
+              </span>
+              {avgLatency > 0 && (
+                <span className="text-muted-foreground/50">~{avgLatency}ms</span>
+              )}
+            </>
+          )}
         </div>
+
+        <button
+          onClick={onOpenAPIPanel}
+          className="flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-all hover:border-primary/30 hover:text-primary"
+          title="API Management"
+        >
+          <Settings2 className="h-3.5 w-3.5" />
+          API
+        </button>
       </div>
     </div>
   );
