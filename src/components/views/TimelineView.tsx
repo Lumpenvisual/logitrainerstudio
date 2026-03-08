@@ -19,6 +19,8 @@ interface ResizeState {
   originalDuration: number;
 }
 
+const SNAP_THRESHOLD_PX = 8; // pixels within which snapping activates
+
 export function TimelineView() {
   const { timeline, setPlayhead, setZoom, togglePlay, scenes, addClip, addLog, updateClip } = useProjectStore();
   const { t } = useI18n();
@@ -29,9 +31,40 @@ export function TimelineView() {
   const [dragGhost, setDragGhost] = useState<{ x: number; y: number; track: 'video' | 'audio' } | null>(null);
   const [resizeState, setResizeState] = useState<ResizeState | null>(null);
   const [resizePreview, setResizePreview] = useState<{ startTime: number; duration: number } | null>(null);
+  const [snapLine, setSnapLine] = useState<number | null>(null);
 
   const pxPerSec = timeline.zoom;
   const totalWidth = Math.max(timeline.duration * pxPerSec, 800);
+  const snapThresholdSec = SNAP_THRESHOLD_PX / pxPerSec;
+
+  /** Get all snap points (edges of other clips on same track), excluding a given clipId */
+  const getSnapPoints = useCallback((excludeClipId: string, track: 'video' | 'audio') => {
+    const points: number[] = [0]; // always snap to 0
+    timeline.clips.forEach((c) => {
+      if (c.id === excludeClipId) return;
+      if (c.track !== track) return;
+      points.push(c.startTime);
+      points.push(c.startTime + c.duration);
+    });
+    return points;
+  }, [timeline.clips]);
+
+  /** Try to snap a time value to the nearest snap point */
+  const trySnap = useCallback((time: number, points: number[]): { snapped: number; didSnap: boolean } => {
+    let closest = time;
+    let minDist = Infinity;
+    for (const p of points) {
+      const dist = Math.abs(time - p);
+      if (dist < minDist) {
+        minDist = dist;
+        closest = p;
+      }
+    }
+    if (minDist <= snapThresholdSec) {
+      return { snapped: closest, didSnap: true };
+    }
+    return { snapped: Math.round(time * 4) / 4, didSnap: false };
+  }, [snapThresholdSec]);
 
   const canUndo = useProjectStore.temporal.getState().pastStates.length > 0;
   const canRedo = useProjectStore.temporal.getState().futureStates.length > 0;
