@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -9,78 +10,67 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
+    // Auth check
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) throw new Error("Unauthorized");
+    const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) throw new Error("Unauthorized");
+
     const { brief, model, sceneCount } = await req.json();
+
+    // Input validation
+    if (!brief || typeof brief !== "string" || brief.trim().length < 3 || brief.length > 2000) {
+      return new Response(JSON.stringify({ error: "Brief must be 3-2000 characters" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const count = Math.min(Math.max(Math.round(Number(sceneCount) || 4), 1), 12);
+
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    const selectedModel = model || "google/gemini-3-flash-preview";
-    const count = sceneCount || 4;
+    const allowedModels = [
+      "google/gemini-3-flash-preview", "google/gemini-2.5-pro", "google/gemini-2.5-flash",
+      "openai/gpt-5", "openai/gpt-5-mini",
+    ];
+    const selectedModel = allowedModels.includes(model) ? model : "google/gemini-3-flash-preview";
 
     const systemPrompt = `You are a professional video script writer. Generate exactly ${count} scenes for a video production.
-Return ONLY a valid JSON array (no markdown, no code blocks) with this exact structure:
-[
-  {
-    "sceneNumber": 1,
-    "sceneType": "Establishing",
-    "durationTargetSec": 8,
-    "visualPrompt": "Detailed visual description for AI image generation",
-    "voiceOverScript": "The narration text for this scene"
-  }
-]
-Each scene should have:
-- sceneNumber: sequential integer
-- sceneType: one of "Establishing", "Interior", "Detail", "Action", "Closing", "Transition"
-- durationTargetSec: 4-12 seconds
-- visualPrompt: detailed, cinematic visual description suitable for AI image generation (50-100 words)
-- voiceOverScript: compelling narration text (1-2 sentences)`;
+Return ONLY a valid JSON array with this structure:
+[{"sceneNumber":1,"sceneType":"Establishing","durationTargetSec":8,"visualPrompt":"Detailed visual description","voiceOverScript":"Narration text"}]
+sceneType: one of "Establishing","Interior","Detail","Action","Closing","Transition". durationTargetSec: 4-12.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
+      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         model: selectedModel,
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: `Create a ${count}-scene video script for: ${brief}` },
+          { role: "user", content: `Create a ${count}-scene video script for: ${brief.trim().slice(0, 2000)}` },
         ],
         temperature: 0.7,
       }),
     });
 
     if (!response.ok) {
-      const status = response.status;
-      if (status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit exceeded. Please wait a moment and try again." }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (status === 402) {
-        return new Response(JSON.stringify({ error: "Usage limit reached. Please add credits to continue." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      const text = await response.text();
-      console.error("AI gateway error:", status, text);
-      throw new Error(`AI gateway error: ${status}`);
+      if (response.status === 429) return new Response(JSON.stringify({ error: "Rate limit exceeded." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      if (response.status === 402) return new Response(JSON.stringify({ error: "Usage limit reached." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      throw new Error(`AI gateway error: ${response.status}`);
     }
 
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content || "";
 
-    // Parse JSON from response (handle markdown code blocks)
     let scenes;
     try {
       const jsonMatch = content.match(/\[[\s\S]*\]/);
-      if (jsonMatch) {
-        scenes = JSON.parse(jsonMatch[0]);
-      } else {
-        throw new Error("No JSON array found in response");
-      }
-    } catch (parseError) {
-      console.error("Parse error:", parseError, "Content:", content);
+      if (jsonMatch) scenes = JSON.parse(jsonMatch[0]);
+      else throw new Error("No JSON array found");
+    } catch {
       throw new Error("Failed to parse script from AI response");
     }
 
@@ -88,9 +78,8 @@ Each scene should have:
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
-    console.error("Script generation error:", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    const msg = e instanceof Error ? e.message : "Unknown error";
+    const status = msg === "Unauthorized" ? 401 : 500;
+    return new Response(JSON.stringify({ error: msg }), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });

@@ -1,11 +1,16 @@
-// API service layer for all AI functions
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+// API service layer for all AI functions — secured with auth tokens
+import { supabase } from "@/integrations/supabase/client";
 
-const headers = {
-  "Content-Type": "application/json",
-  Authorization: `Bearer ${SUPABASE_KEY}`,
-};
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+
+async function getAuthHeaders(): Promise<Record<string, string>> {
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token;
+  return {
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+}
 
 export interface ScriptScene {
   sceneNumber: number;
@@ -30,6 +35,7 @@ export async function generateScript(
 ): Promise<APICallResult<{ scenes: ScriptScene[] }>> {
   const start = performance.now();
   try {
+    const headers = await getAuthHeaders();
     const res = await fetch(`${SUPABASE_URL}/functions/v1/ai-generate-script`, {
       method: "POST",
       headers,
@@ -53,6 +59,7 @@ export async function streamChat(params: {
   onError: (error: string) => void;
 }) {
   try {
+    const headers = await getAuthHeaders();
     const res = await fetch(`${SUPABASE_URL}/functions/v1/ai-chat`, {
       method: "POST",
       headers,
@@ -65,10 +72,7 @@ export async function streamChat(params: {
       return;
     }
 
-    if (!res.body) {
-      params.onError("No response body");
-      return;
-    }
+    if (!res.body) { params.onError("No response body"); return; }
 
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
@@ -110,6 +114,7 @@ export async function generateImage(
 ): Promise<APICallResult<{ imageUrl: string; description: string }>> {
   const start = performance.now();
   try {
+    const headers = await getAuthHeaders();
     const res = await fetch(`${SUPABASE_URL}/functions/v1/ai-generate-image`, {
       method: "POST",
       headers,
@@ -132,6 +137,7 @@ export async function analyzeImage(
 ): Promise<APICallResult<{ analysis: string }>> {
   const start = performance.now();
   try {
+    const headers = await getAuthHeaders();
     const res = await fetch(`${SUPABASE_URL}/functions/v1/ai-analyze-image`, {
       method: "POST",
       headers,
