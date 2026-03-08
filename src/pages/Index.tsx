@@ -31,6 +31,9 @@ const Index = () => {
 
   const imageLabScene = imageLabSceneId ? scenes.find((s) => s.id === imageLabSceneId) ?? null : null;
 
+  // Smart alert engine — monitors API calls and triggers alerts
+  useAlertEngine();
+
   useEffect(() => {
     if (user) {
       listProjects().then(setRecentProjects);
