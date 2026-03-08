@@ -125,6 +125,16 @@ export function TopBar({ onOpenAPIPanel, onSave }: { onOpenAPIPanel: () => void;
 
         {user && (
           <button
+            onClick={() => navigate('/profile')}
+            className="flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-all hover:border-primary/30 hover:text-primary"
+            title="Profile"
+          >
+            <UserCircle className="h-3.5 w-3.5" />
+          </button>
+        )}
+
+        {user && (
+          <button
             onClick={signOut}
             className="flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-all hover:border-destructive/30 hover:text-destructive"
             title="Sign Out"
