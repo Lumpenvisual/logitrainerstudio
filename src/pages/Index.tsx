@@ -20,6 +20,8 @@ import { AdminApprovalPanel } from '@/components/panels/AdminApprovalPanel';
 import { MediaBrowserPanel } from '@/components/panels/MediaBrowserPanel';
 import { ProjectSettingsPanel } from '@/components/panels/ProjectSettingsPanel';
 import { RenderExportPanel } from '@/components/panels/RenderExportPanel';
+import { KeyboardShortcutsHelp } from '@/components/panels/KeyboardShortcutsHelp';
+import { ColorGradingPanel } from '@/components/panels/ColorGradingPanel';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useAlertEngine } from '@/hooks/useAlertEngine';
 import { requestNotificationPermission } from '@/lib/notifications';
@@ -42,6 +44,8 @@ const Index = () => {
   const [showMediaBrowser, setShowMediaBrowser] = useState(false);
   const [showProjectSettings, setShowProjectSettings] = useState(false);
   const [showRenderExport, setShowRenderExport] = useState(false);
+  const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
+  const [showColorGrading, setShowColorGrading] = useState(false);
   const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
   const [recentProjects, setRecentProjects] = useState<any[]>([]);
 
@@ -55,6 +59,19 @@ const Index = () => {
   useEffect(() => {
     if (user) { listProjects().then(setRecentProjects); }
   }, [user, listProjects]);
+
+  // Global ? key for keyboard shortcuts
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.key === '?') {
+        e.preventDefault();
+        setShowKeyboardShortcuts(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
 
   const handleSave = useCallback(async () => {
     const id = await saveProject(currentProjectId ?? undefined);
@@ -141,6 +158,8 @@ const Index = () => {
             onOpenMediaBrowser={() => setShowMediaBrowser(true)}
             onOpenProjectSettings={() => setShowProjectSettings(true)}
             onOpenRenderExport={() => setShowRenderExport(true)}
+            onOpenColorGrading={() => setShowColorGrading(true)}
+            onOpenKeyboardShortcuts={() => setShowKeyboardShortcuts(true)}
           />
           <div className="flex flex-1 overflow-hidden">
             <div className="flex flex-1 flex-col overflow-hidden">
@@ -178,6 +197,12 @@ const Index = () => {
       </AnimatePresence>
       <AnimatePresence>
         {showRenderExport && <RenderExportPanel onClose={() => setShowRenderExport(false)} />}
+      </AnimatePresence>
+      <AnimatePresence>
+        {showKeyboardShortcuts && <KeyboardShortcutsHelp onClose={() => setShowKeyboardShortcuts(false)} />}
+      </AnimatePresence>
+      <AnimatePresence>
+        {showColorGrading && <ColorGradingPanel onClose={() => setShowColorGrading(false)} />}
       </AnimatePresence>
 
       <OnboardingTour />
