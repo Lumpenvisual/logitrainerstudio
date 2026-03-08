@@ -1,8 +1,8 @@
 import { useProjectStore } from '@/store/useProjectStore';
 import { useAPIStore } from '@/store/useAPIStore';
 import { useI18n } from '@/i18n/useI18n';
-import { Sparkles, Film, Clock, Image, Mic, Video, Loader2, Pencil, Check, X, GripVertical } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Sparkles, Film, Clock, Image, Mic, Video, Loader2, Pencil, Check, X, Hash, Shuffle, LayoutGrid, LayoutList } from 'lucide-react';
+import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import { generateScript } from '@/services/aiService';
 import { getModelById } from '@/services/apiRegistry';
 import { toast } from 'sonner';
@@ -15,6 +15,8 @@ export function ArchitectView() {
   const [editingScene, setEditingScene] = useState<string | null>(null);
   const [editVisual, setEditVisual] = useState('');
   const [editVoice, setEditVoice] = useState('');
+  const [sceneCount, setSceneCount] = useState(4);
+  const [viewMode, setViewMode] = useState<'grid' | 'storyboard'>('grid');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleGenerate = async () => {
@@ -23,10 +25,10 @@ export function ArchitectView() {
     clearScenes();
     const model = preferences.scriptGeneration;
     const modelInfo = getModelById(model);
-    addLog('info', `Generating script with ${modelInfo?.name || model}...`);
-    toast.loading(t('architect.genscript'), { id: 'script-gen' });
+    addLog('info', `Generating ${sceneCount}-scene script with ${modelInfo?.name || model}...`);
+    toast.loading(`Generating ${sceneCount} scenes...`, { id: 'script-gen' });
 
-    const result = await generateScript(brief, model, 4);
+    const result = await generateScript(brief, model, sceneCount);
 
     if (result.error) {
       addLog('error', `Script generation failed: ${result.error}`);
@@ -58,16 +60,13 @@ export function ArchitectView() {
     setEditingScene(null);
   };
 
-  const cancelEdit = () => {
-    setEditingScene(null);
-  };
+  const cancelEdit = () => setEditingScene(null);
 
-  // Auto-focus textarea on brief area
   useEffect(() => {
-    if (scenes.length === 0 && !isGeneratingScript) {
-      textareaRef.current?.focus();
-    }
+    if (scenes.length === 0 && !isGeneratingScript) textareaRef.current?.focus();
   }, []);
+
+  const totalDuration = scenes.reduce((acc, s) => acc + s.durationTargetSec, 0);
 
   return (
     <div className="flex h-full flex-col">
@@ -77,10 +76,13 @@ export function ArchitectView() {
           <span className="rounded-full bg-primary/10 border border-primary/20 px-2 py-0.5 text-[9px] font-mono font-bold text-primary tracking-wider">
             {getModelById(preferences.scriptGeneration)?.name || 'AI'}
           </span>
+          {scenes.length > 0 && (
+            <span className="ml-auto text-[10px] font-mono text-muted-foreground/60">
+              {scenes.length} scenes · {totalDuration}s total
+            </span>
+          )}
         </div>
-        <p className="mb-3 text-xs text-muted-foreground leading-relaxed">
-          {t('architect.desc')}
-        </p>
+        <p className="mb-3 text-xs text-muted-foreground leading-relaxed">{t('architect.desc')}</p>
 
         <div className="flex gap-3">
           <div className="relative flex-1">
@@ -92,18 +94,59 @@ export function ArchitectView() {
               className="h-[72px] w-full resize-none rounded-lg border border-border bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/40 focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
             />
           </div>
-          <button
-            onClick={handleGenerate}
-            disabled={isGeneratingScript || !brief.trim()}
-            className="flex h-[72px] w-36 items-center justify-center gap-2 rounded-lg bg-primary text-primary-foreground font-display font-bold text-sm transition-all hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed glow-primary"
-          >
-            {isGeneratingScript ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-            {isGeneratingScript ? t('architect.generating') : t('architect.generate')}
-          </button>
+          <div className="flex flex-col gap-2">
+            {/* Scene count selector */}
+            <div className="flex items-center gap-1.5 rounded-lg border border-border bg-background px-2 py-1">
+              <Hash className="h-3 w-3 text-muted-foreground/50" />
+              <select
+                value={sceneCount}
+                onChange={(e) => setSceneCount(Number(e.target.value))}
+                className="bg-transparent text-xs font-mono text-foreground focus:outline-none cursor-pointer"
+              >
+                {[2, 3, 4, 5, 6, 8, 10, 12].map(n => (
+                  <option key={n} value={n}>{n} scenes</option>
+                ))}
+              </select>
+            </div>
+            <button
+              onClick={handleGenerate}
+              disabled={isGeneratingScript || !brief.trim()}
+              className="flex h-10 w-36 items-center justify-center gap-2 rounded-lg bg-primary text-primary-foreground font-display font-bold text-sm transition-all hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed glow-primary"
+            >
+              {isGeneratingScript ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+              {isGeneratingScript ? t('architect.generating') : t('architect.generate')}
+            </button>
+          </div>
         </div>
       </div>
 
       <div className="flex-1 overflow-auto p-5">
+        {/* View toggle */}
+        {scenes.length > 0 && (
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-1 rounded-lg border border-border/50 p-0.5">
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`rounded-md p-1.5 transition-colors ${viewMode === 'grid' ? 'bg-primary/15 text-primary' : 'text-muted-foreground/50 hover:text-foreground'}`}
+              >
+                <LayoutGrid className="h-3.5 w-3.5" />
+              </button>
+              <button
+                onClick={() => setViewMode('storyboard')}
+                className={`rounded-md p-1.5 transition-colors ${viewMode === 'storyboard' ? 'bg-primary/15 text-primary' : 'text-muted-foreground/50 hover:text-foreground'}`}
+              >
+                <LayoutList className="h-3.5 w-3.5" />
+              </button>
+            </div>
+            <button
+              onClick={() => { clearScenes(); toast.success('Scenes cleared'); }}
+              className="text-[10px] text-muted-foreground/50 hover:text-destructive transition-colors"
+            >
+              Clear all
+            </button>
+          </div>
+        )}
+
         <AnimatePresence mode="wait">
           {scenes.length === 0 && !isGeneratingScript ? (
             <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex h-full items-center justify-center">
@@ -120,7 +163,53 @@ export function ArchitectView() {
                 <p className="text-xs text-muted-foreground/50 mt-1 font-mono">{t('architect.using')} {getModelById(preferences.scriptGeneration)?.name}</p>
               </div>
             </motion.div>
+          ) : viewMode === 'storyboard' ? (
+            /* Storyboard View — horizontal filmstrip */
+            <motion.div key="storyboard" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-3 overflow-x-auto pb-4">
+              {scenes.map((scene, i) => (
+                <motion.div
+                  key={scene.id}
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.04 }}
+                  className="shrink-0 w-52 rounded-xl border border-border/50 bg-card/50 overflow-hidden group"
+                >
+                  {/* Thumbnail area */}
+                  <div className="relative h-28 bg-secondary/20 flex items-center justify-center">
+                    <div className="absolute top-2 left-2 flex items-center gap-1.5">
+                      <span className="flex h-5 w-5 items-center justify-center rounded-md bg-primary/20 backdrop-blur-sm text-[9px] font-bold text-primary font-mono border border-primary/20">
+                        {scene.sceneNumber}
+                      </span>
+                      <span className="text-[8px] font-mono text-foreground/60 bg-background/60 backdrop-blur-sm rounded px-1 py-0.5">{scene.sceneType}</span>
+                    </div>
+                    <Film className="h-6 w-6 text-muted-foreground/15" />
+                    <div className="absolute bottom-1 right-2 text-[9px] font-mono text-muted-foreground/50">{scene.durationTargetSec}s</div>
+                  </div>
+                  <div className="p-3">
+                    <p className="text-[10px] text-foreground/60 leading-relaxed line-clamp-2 mb-1">{scene.visualPrompt}</p>
+                    <p className="text-[9px] text-muted-foreground/40 italic line-clamp-1">"{scene.voiceOverScript}"</p>
+                  </div>
+                  <div className="flex items-center gap-1 px-3 pb-2">
+                    {(['image', 'audio', 'video'] as const).map((type) => {
+                      const IconMap = { image: Image, audio: Mic, video: Video };
+                      const Icon = IconMap[type];
+                      const status = scene.status[type];
+                      return (
+                        <span key={type} className={`flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[8px] font-mono ${
+                          status === 'ready' ? 'bg-success/10 text-success' :
+                          status === 'generating' ? 'bg-warning/10 text-warning' :
+                          'bg-secondary/50 text-muted-foreground/40'
+                        }`}>
+                          <Icon className="h-2 w-2" />
+                        </span>
+                      );
+                    })}
+                  </div>
+                </motion.div>
+              ))}
+            </motion.div>
           ) : (
+            /* Grid View */
             <motion.div key="scenes" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="grid gap-3 lg:grid-cols-2">
               {scenes.map((scene, i) => {
                 const isEditing = editingScene === scene.id;
