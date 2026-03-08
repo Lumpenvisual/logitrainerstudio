@@ -521,6 +521,7 @@ export function TimelineView() {
           { key: 'T', action: 'Transition' },
           { key: 'D', action: 'Duplicate' },
           { key: 'Del', action: 'Delete' },
+          { key: 'M', action: 'Marker' },
           { key: 'Drop files', action: 'Import media' },
         ].map(({ key, action }) => (
           <span key={key} className="text-[10px] text-muted-foreground/50">
