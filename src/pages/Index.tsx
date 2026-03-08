@@ -152,7 +152,6 @@ const Index = () => {
             <AnimatePresence>
               {(selectedClipId || selectedTransitionId) && currentView === 'timeline' && <ClipPropertiesPanel />}
             </AnimatePresence>
-            </AnimatePresence>
           </div>
         </div>
       </div>
