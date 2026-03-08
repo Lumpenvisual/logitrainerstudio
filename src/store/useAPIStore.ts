@@ -21,7 +21,6 @@ interface APIStore {
   addCallLog: (log: Omit<APICallLog, 'id' | 'timestamp'>) => void;
   clearCallLogs: () => void;
 
-  // Stats
   totalCalls: number;
   totalErrors: number;
   avgLatency: number;
@@ -47,7 +46,6 @@ export const useAPIStore = create<APIStore>()(
         if (s.callLogs.length > 200) s.callLogs.pop();
         s.totalCalls++;
         if (log.status === 'error') s.totalErrors++;
-        // Recalculate average
         const successLogs = s.callLogs.filter((l) => l.status === 'success');
         s.avgLatency = successLogs.length > 0
           ? Math.round(successLogs.reduce((a, l) => a + l.latencyMs, 0) / successLogs.length)
