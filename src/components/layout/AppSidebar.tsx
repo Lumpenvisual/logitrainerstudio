@@ -3,66 +3,84 @@ import { useProjectStore, ViewMode } from '@/store/useProjectStore';
 import { useI18n } from '@/i18n/useI18n';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export function AppSidebar() {
   const { currentView, setView, toggleChat, isChatOpen, logs } = useProjectStore();
   const { t } = useI18n();
   const recentErrors = logs.filter((l) => l.level === 'error').length;
 
-  const navItems: { view: ViewMode; icon: typeof FileText; labelKey: 'nav.architect' | 'nav.studio' | 'nav.timeline' }[] = [
-    { view: 'architect', icon: FileText, labelKey: 'nav.architect' },
-    { view: 'studio', icon: Clapperboard, labelKey: 'nav.studio' },
-    { view: 'timeline', icon: Clock, labelKey: 'nav.timeline' },
+  const navItems: { view: ViewMode; icon: typeof FileText; label: string; sub: string }[] = [
+    { view: 'architect', icon: FileText, label: t('nav.architect'), sub: t('nav.architect.sub') },
+    { view: 'studio', icon: Clapperboard, label: t('nav.studio'), sub: t('nav.studio.sub') },
+    { view: 'timeline', icon: Clock, label: t('nav.timeline'), sub: t('nav.timeline.sub') },
   ];
 
   return (
-    <div className="flex h-full w-16 flex-col items-center border-r border-border bg-card py-4 gap-2">
-      <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-md bg-primary/20 border border-primary/30">
-        <Activity className="h-5 w-5 text-primary" />
+    <div className="flex h-full w-[60px] flex-col items-center border-r border-border bg-card/50 py-3 gap-1">
+      <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-primary/15 border border-primary/20">
+        <Activity className="h-4.5 w-4.5 text-primary" />
       </div>
 
-      <nav className="flex flex-1 flex-col gap-1">
-        {navItems.map(({ view, icon: Icon, labelKey }) => {
+      <nav className="flex flex-1 flex-col gap-0.5">
+        {navItems.map(({ view, icon: Icon, label, sub }) => {
           const active = currentView === view;
           return (
-            <button
-              key={view}
-              onClick={() => setView(view)}
-              className={cn(
-                'group relative flex h-12 w-12 items-center justify-center rounded-md transition-all duration-200',
-                active
-                  ? 'bg-primary/20 text-primary glow-primary'
-                  : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
-              )}
-              title={t(labelKey)}
-            >
-              <Icon className="h-5 w-5" />
-              {active && (
-                <motion.div
-                  layoutId="sidebar-active"
-                  className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-0.5 rounded-r bg-primary"
-                />
-              )}
-            </button>
+            <Tooltip key={view} delayDuration={200}>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => setView(view)}
+                  className={cn(
+                    'group relative flex h-10 w-10 items-center justify-center rounded-lg transition-all duration-200',
+                    active
+                      ? 'bg-primary/15 text-primary'
+                      : 'text-muted-foreground/60 hover:bg-secondary/50 hover:text-foreground'
+                  )}
+                >
+                  <Icon className="h-[18px] w-[18px]" />
+                  {active && (
+                    <motion.div
+                      layoutId="sidebar-active"
+                      className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[2px] rounded-r bg-primary"
+                      transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+                    />
+                  )}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right" className="font-display">
+                <p className="font-semibold">{label}</p>
+                <p className="text-[10px] text-muted-foreground">{sub}</p>
+              </TooltipContent>
+            </Tooltip>
           );
         })}
       </nav>
 
-      <button
-        onClick={toggleChat}
-        className={cn(
-          'relative flex h-12 w-12 items-center justify-center rounded-md transition-all duration-200',
-          isChatOpen
-            ? 'bg-primary/20 text-primary'
-            : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
-        )}
-        title={t('nav.assistant')}
-      >
-        <Bot className="h-5 w-5" />
-        {recentErrors > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 h-3 w-3 rounded-full bg-destructive animate-pulse-glow" />
-        )}
-      </button>
+      <Tooltip delayDuration={200}>
+        <TooltipTrigger asChild>
+          <button
+            onClick={toggleChat}
+            className={cn(
+              'relative flex h-10 w-10 items-center justify-center rounded-lg transition-all duration-200',
+              isChatOpen
+                ? 'bg-primary/15 text-primary'
+                : 'text-muted-foreground/60 hover:bg-secondary/50 hover:text-foreground'
+            )}
+          >
+            <Bot className="h-[18px] w-[18px]" />
+            {recentErrors > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-destructive animate-pulse-glow" />
+            )}
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="right" className="font-display">
+          <p className="font-semibold">{t('nav.assistant')}</p>
+        </TooltipContent>
+      </Tooltip>
     </div>
   );
 }

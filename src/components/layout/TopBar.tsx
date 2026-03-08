@@ -3,8 +3,9 @@ import { useAPIStore } from '@/store/useAPIStore';
 import { useI18n } from '@/i18n/useI18n';
 import { useAuth } from '@/hooks/useAuth';
 import { Locale } from '@/i18n/translations';
-import { Zap, ChevronRight, Settings2, Activity, Keyboard, LogOut, Save, UserCircle } from 'lucide-react';
+import { Zap, ChevronRight, Settings2, Activity, LogOut, Save, UserCircle, Check, Cloud, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useCallback } from 'react';
 
 const localeLabels: Record<Locale, string> = { en: 'EN', fr: 'FR', es: 'ES' };
 const localeOrder: Locale[] = ['en', 'fr', 'es'];
@@ -15,6 +16,8 @@ export function TopBar({ onOpenAPIPanel, onSave }: { onOpenAPIPanel: () => void;
   const { t, locale, setLocale } = useI18n();
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [showUserMenu, setShowUserMenu] = useState(false);
 
   const viewLabels: Record<string, string> = {
     architect: t('nav.architect'),
@@ -22,72 +25,86 @@ export function TopBar({ onOpenAPIPanel, onSave }: { onOpenAPIPanel: () => void;
     timeline: t('nav.timeline'),
   };
 
-  // Project completion tracker
-  const totalAssets = scenes.length * 3; // image + audio + video per scene
+  const totalAssets = scenes.length * 3;
   const readyAssets = scenes.reduce((acc, s) => {
     return acc + (s.status.image === 'ready' ? 1 : 0) + (s.status.audio === 'ready' ? 1 : 0) + (s.status.video === 'ready' ? 1 : 0);
   }, 0);
   const completionPct = totalAssets > 0 ? Math.round((readyAssets / totalAssets) * 100) : 0;
 
+  const handleSave = useCallback(async () => {
+    if (!onSave) return;
+    setSaveStatus('saving');
+    await onSave();
+    setSaveStatus('saved');
+    setTimeout(() => setSaveStatus('idle'), 2000);
+  }, [onSave]);
+
+  // Close user menu on outside click
+  useEffect(() => {
+    if (!showUserMenu) return;
+    const handler = () => setShowUserMenu(false);
+    document.addEventListener('click', handler);
+    return () => document.removeEventListener('click', handler);
+  }, [showUserMenu]);
+
   return (
-    <div className="flex h-12 items-center justify-between border-b border-border bg-card px-4">
-      <div className="flex items-center gap-3">
-        <div className="flex items-center gap-1.5 text-sm font-medium text-foreground">
-          <Zap className="h-4 w-4 text-primary" />
-          <span className="font-semibold">{t('app.name')}</span>
-          <span className="text-muted-foreground font-normal">AI Studio</span>
+    <div className="flex h-11 items-center justify-between border-b border-border bg-card/80 backdrop-blur-sm px-4">
+      <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-1.5">
+          <Activity className="h-3.5 w-3.5 text-primary" />
+          <span className="font-display text-sm font-bold text-foreground tracking-tight">{t('app.name')}</span>
         </div>
-        <ChevronRight className="h-3 w-3 text-muted-foreground" />
-        <span className="text-sm text-muted-foreground">{projectTitle}</span>
-        <ChevronRight className="h-3 w-3 text-muted-foreground" />
-        <span className="text-sm font-medium text-primary">{viewLabels[currentView]}</span>
+        <ChevronRight className="h-3 w-3 text-muted-foreground/30" />
+        <span className="text-sm text-muted-foreground truncate max-w-[140px]">{projectTitle}</span>
+        <ChevronRight className="h-3 w-3 text-muted-foreground/30" />
+        <span className="text-xs font-semibold text-primary font-display">{viewLabels[currentView]}</span>
       </div>
 
-      <div className="flex items-center gap-4">
-        {/* Project completion */}
+      <div className="flex items-center gap-2.5">
+        {/* Completion bar */}
         {scenes.length > 0 && (
-          <div className="flex items-center gap-2">
-            <div className="w-20 h-1.5 rounded-full bg-secondary overflow-hidden">
+          <div className="flex items-center gap-2 mr-1">
+            <div className="w-16 h-1 rounded-full bg-border overflow-hidden">
               <div
-                className="h-full rounded-full bg-primary transition-all duration-500"
+                className="h-full rounded-full bg-gradient-to-r from-primary to-primary-glow transition-all duration-700"
                 style={{ width: `${completionPct}%` }}
               />
             </div>
-            <span className="text-[10px] font-mono text-muted-foreground">{completionPct}%</span>
+            <span className="text-[10px] font-mono text-muted-foreground/60">{completionPct}%</span>
           </div>
         )}
 
-        <div className="flex items-center gap-2 text-xs font-mono text-muted-foreground">
+        {/* Status */}
+        <div className="hidden md:flex items-center gap-2 text-[10px] font-mono text-muted-foreground/50">
           <span className="flex items-center gap-1">
             <span className="h-1.5 w-1.5 rounded-full bg-success animate-pulse" />
             {t('status.online')}
           </span>
-          <span className="text-border">|</span>
-          <span>{scenes.length} {t('status.scenes')}</span>
+          {scenes.length > 0 && (
+            <>
+              <span className="text-border">·</span>
+              <span>{scenes.length} {t('status.scenes')}</span>
+            </>
+          )}
           {totalCalls > 0 && (
             <>
-              <span className="text-border">|</span>
-              <span className="flex items-center gap-1">
-                <Activity className="h-3 w-3" />
-                {totalCalls} {t('status.calls')}
-              </span>
-              {avgLatency > 0 && (
-                <span className="text-muted-foreground/50">~{avgLatency}ms</span>
-              )}
+              <span className="text-border">·</span>
+              <span>{totalCalls} {t('status.calls')}</span>
+              {avgLatency > 0 && <span className="text-muted-foreground/30">~{avgLatency}ms</span>}
             </>
           )}
         </div>
 
         {/* Language switcher */}
-        <div className="flex items-center gap-0.5 rounded-md border border-border overflow-hidden">
+        <div className="flex items-center rounded-md border border-border/50 overflow-hidden">
           {localeOrder.map((l) => (
             <button
               key={l}
               onClick={() => setLocale(l)}
-              className={`px-2 py-1 text-[10px] font-bold transition-colors ${
+              className={`px-1.5 py-1 text-[9px] font-bold tracking-wider transition-colors ${
                 locale === l
                   ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
+                  : 'text-muted-foreground/50 hover:text-foreground hover:bg-secondary'
               }`}
             >
               {localeLabels[l]}
@@ -95,52 +112,74 @@ export function TopBar({ onOpenAPIPanel, onSave }: { onOpenAPIPanel: () => void;
           ))}
         </div>
 
-        {/* Keyboard shortcuts hint */}
-        <button
-          onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: '?', shiftKey: true }))}
-          className="flex items-center justify-center rounded-md border border-border p-1.5 text-muted-foreground transition-all hover:border-primary/30 hover:text-primary"
-          title="Keyboard Shortcuts (?)"
-        >
-          <Keyboard className="h-3.5 w-3.5" />
-        </button>
-
+        {/* Save button with status */}
         {onSave && user && (
           <button
-            onClick={onSave}
-            className="flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-all hover:border-primary/30 hover:text-primary"
-            title="Save Project"
+            onClick={handleSave}
+            disabled={saveStatus === 'saving'}
+            className="flex items-center gap-1.5 rounded-md border border-border/50 px-2.5 py-1.5 text-xs font-medium transition-all hover:border-primary/30 hover:text-primary disabled:opacity-50"
+            title="Save Project (Ctrl+S)"
           >
-            <Save className="h-3.5 w-3.5" />
+            {saveStatus === 'saving' ? (
+              <Loader2 className="h-3 w-3 animate-spin text-primary" />
+            ) : saveStatus === 'saved' ? (
+              <Check className="h-3 w-3 text-success" />
+            ) : (
+              <Cloud className="h-3 w-3 text-muted-foreground" />
+            )}
+            <span className={`text-[10px] font-mono ${
+              saveStatus === 'saved' ? 'text-success' : 'text-muted-foreground'
+            }`}>
+              {saveStatus === 'saving' ? 'Saving...' : saveStatus === 'saved' ? 'Saved' : 'Save'}
+            </span>
           </button>
         )}
 
+        {/* API Settings */}
         <button
           onClick={onOpenAPIPanel}
-          className="flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-all hover:border-primary/30 hover:text-primary"
+          className="flex items-center gap-1.5 rounded-md border border-border/50 px-2.5 py-1.5 text-xs text-muted-foreground transition-all hover:border-primary/30 hover:text-primary"
           title={t('api.title')}
         >
-          <Settings2 className="h-3.5 w-3.5" />
-          API
+          <Settings2 className="h-3 w-3" />
         </button>
 
+        {/* User menu */}
         {user && (
-          <button
-            onClick={() => navigate('/profile')}
-            className="flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-all hover:border-primary/30 hover:text-primary"
-            title="Profile"
-          >
-            <UserCircle className="h-3.5 w-3.5" />
-          </button>
-        )}
+          <div className="relative">
+            <button
+              onClick={(e) => { e.stopPropagation(); setShowUserMenu(!showUserMenu); }}
+              className="flex items-center gap-1.5 rounded-md border border-border/50 px-2 py-1.5 text-xs text-muted-foreground transition-all hover:border-primary/30 hover:text-primary"
+            >
+              <UserCircle className="h-3.5 w-3.5" />
+            </button>
 
-        {user && (
-          <button
-            onClick={signOut}
-            className="flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-all hover:border-destructive/30 hover:text-destructive"
-            title="Sign Out"
-          >
-            <LogOut className="h-3.5 w-3.5" />
-          </button>
+            {showUserMenu && (
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className="absolute right-0 top-full mt-1.5 w-48 rounded-lg border border-border bg-card/95 backdrop-blur-xl p-1.5 shadow-xl shadow-background/50 z-50"
+              >
+                <div className="px-3 py-2 border-b border-border mb-1">
+                  <p className="text-xs font-medium text-foreground truncate">{user.email}</p>
+                  <p className="text-[10px] text-muted-foreground/50 font-mono">Free Plan</p>
+                </div>
+                <button
+                  onClick={() => { navigate('/profile'); setShowUserMenu(false); }}
+                  className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+                >
+                  <UserCircle className="h-3.5 w-3.5" />
+                  Profile
+                </button>
+                <button
+                  onClick={() => { signOut(); setShowUserMenu(false); }}
+                  className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-xs text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                >
+                  <LogOut className="h-3.5 w-3.5" />
+                  Sign Out
+                </button>
+              </div>
+            )}
+          </div>
         )}
       </div>
     </div>
