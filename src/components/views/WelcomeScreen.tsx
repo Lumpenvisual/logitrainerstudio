@@ -2,19 +2,21 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Activity, Sparkles, ArrowRight, Zap, Film, Clock, Cpu } from 'lucide-react';
 import { useState } from 'react';
 import { useProjectStore } from '@/store/useProjectStore';
+import { useI18n } from '@/i18n/useI18n';
 import heroBg from '@/assets/hero-bg.jpg';
-
-const features = [
-  { icon: Sparkles, title: 'AI Script Generation', desc: 'Multi-scene scripts from a single brief' },
-  { icon: Film, title: 'Asset Orchestration', desc: 'Image, audio & video generation in one flow' },
-  { icon: Clock, title: 'Timeline Editor', desc: 'Canvas-based editing with multi-track support' },
-  { icon: Cpu, title: 'Neural Assistant', desc: 'AI copilot for creative direction' },
-];
 
 export function WelcomeScreen({ onEnter }: { onEnter: () => void }) {
   const { setProjectTitle, addLog } = useProjectStore();
+  const { t } = useI18n();
   const [title, setTitle] = useState('');
   const [step, setStep] = useState<'hero' | 'create'>('hero');
+
+  const features = [
+    { icon: Sparkles, title: t('welcome.feature.script'), desc: t('welcome.feature.script.desc') },
+    { icon: Film, title: t('welcome.feature.assets'), desc: t('welcome.feature.assets.desc') },
+    { icon: Clock, title: t('welcome.feature.timeline'), desc: t('welcome.feature.timeline.desc') },
+    { icon: Cpu, title: t('welcome.feature.neural'), desc: t('welcome.feature.neural.desc') },
+  ];
 
   const handleCreate = () => {
     const finalTitle = title.trim() || 'Untitled Project';
@@ -26,18 +28,15 @@ export function WelcomeScreen({ onEnter }: { onEnter: () => void }) {
 
   return (
     <div className="relative flex h-screen w-screen items-center justify-center overflow-hidden bg-background">
-      {/* Background image */}
       <div className="absolute inset-0">
         <img src={heroBg} alt="" className="h-full w-full object-cover opacity-20" />
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-background/40" />
       </div>
 
-      {/* Scan line effect */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute inset-x-0 h-px bg-primary/20 animate-scan-line" />
       </div>
 
-      {/* Grid overlay */}
       <div
         className="absolute inset-0 opacity-[0.03] pointer-events-none"
         style={{
@@ -56,7 +55,6 @@ export function WelcomeScreen({ onEnter }: { onEnter: () => void }) {
             transition={{ duration: 0.5 }}
             className="relative z-10 flex flex-col items-center text-center px-4"
           >
-            {/* Logo */}
             <motion.div
               initial={{ scale: 0, rotate: -180 }}
               animate={{ scale: 1, rotate: 0 }}
@@ -66,21 +64,16 @@ export function WelcomeScreen({ onEnter }: { onEnter: () => void }) {
               <Activity className="h-10 w-10 text-primary" />
             </motion.div>
 
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
-            >
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
               <h1 className="mb-2 text-5xl font-bold tracking-tight">
-                <span className="text-gradient-primary">LogiTrainer</span>
+                <span className="text-gradient-primary">{t('app.name')}</span>
               </h1>
-              <p className="mb-1 text-xl font-medium text-foreground">AI Studio 2.0 Pro</p>
+              <p className="mb-1 text-xl font-medium text-foreground">{t('app.subtitle')}</p>
               <p className="mb-8 text-sm font-mono text-muted-foreground tracking-wider uppercase">
-                Dark Cinematic Industrial Video IDE
+                {t('app.tagline')}
               </p>
             </motion.div>
 
-            {/* Feature grid */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -112,7 +105,7 @@ export function WelcomeScreen({ onEnter }: { onEnter: () => void }) {
               className="group flex items-center gap-2 rounded-md bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition-all hover:bg-primary/90 glow-primary"
             >
               <Zap className="h-4 w-4" />
-              Initialize Project
+              {t('welcome.init')}
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
             </motion.button>
 
@@ -122,7 +115,7 @@ export function WelcomeScreen({ onEnter }: { onEnter: () => void }) {
               transition={{ delay: 1.3 }}
               className="mt-4 text-xs font-mono text-muted-foreground/50"
             >
-              v2.0.0 • Neural Engine Ready
+              {t('app.version')}
             </motion.p>
           </motion.div>
         ) : (
@@ -139,8 +132,8 @@ export function WelcomeScreen({ onEnter }: { onEnter: () => void }) {
                   <Film className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-semibold text-foreground">New Project</h2>
-                  <p className="text-xs text-muted-foreground">Name your video production</p>
+                  <h2 className="text-lg font-semibold text-foreground">{t('welcome.new')}</h2>
+                  <p className="text-xs text-muted-foreground">{t('welcome.name')}</p>
                 </div>
               </div>
 
@@ -148,7 +141,7 @@ export function WelcomeScreen({ onEnter }: { onEnter: () => void }) {
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
-                placeholder="e.g. Cyberpunk Coffee Ad"
+                placeholder={t('welcome.placeholder')}
                 autoFocus
                 className="mb-6 w-full rounded-md border border-border bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
               />
@@ -158,14 +151,14 @@ export function WelcomeScreen({ onEnter }: { onEnter: () => void }) {
                   onClick={() => setStep('hero')}
                   className="flex-1 rounded-md border border-border bg-secondary px-4 py-2.5 text-sm font-medium text-secondary-foreground transition-all hover:bg-secondary/80"
                 >
-                  Back
+                  {t('welcome.back')}
                 </button>
                 <button
                   onClick={handleCreate}
                   className="flex flex-1 items-center justify-center gap-2 rounded-md bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-all hover:bg-primary/90 glow-primary"
                 >
                   <Sparkles className="h-4 w-4" />
-                  Create & Enter
+                  {t('welcome.create')}
                 </button>
               </div>
             </div>

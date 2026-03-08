@@ -1,14 +1,17 @@
 import { useProjectStore } from '@/store/useProjectStore';
 import { useAPIStore } from '@/store/useAPIStore';
-import { Send, Bot, User, X, Sparkles, Settings2 } from 'lucide-react';
+import { useI18n } from '@/i18n/useI18n';
+import { Send, Bot, User, X, Sparkles } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import ReactMarkdown from 'react-markdown';
 import { streamChat } from '@/services/aiService';
 import { getModelById } from '@/services/apiRegistry';
 
 export function ChatPanel() {
   const { chatMessages, addChatMessage, isChatOpen, toggleChat, addLog } = useProjectStore();
   const { preferences, addCallLog } = useAPIStore();
+  const { t } = useI18n();
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -38,19 +41,13 @@ export function ChatPanel() {
       model,
       onDelta: (chunk) => {
         assistantContent += chunk;
-        // Update the last message or create new
         useProjectStore.setState((state) => {
           const msgs = [...state.chatMessages];
           const last = msgs[msgs.length - 1];
           if (last?.role === 'assistant') {
             msgs[msgs.length - 1] = { ...last, content: assistantContent };
           } else {
-            msgs.push({
-              id: crypto.randomUUID(),
-              role: 'assistant',
-              content: assistantContent,
-              timestamp: new Date(),
-            });
+            msgs.push({ id: crypto.randomUUID(), role: 'assistant', content: assistantContent, timestamp: new Date() });
           }
           return { chatMessages: msgs };
         });
@@ -81,14 +78,13 @@ export function ChatPanel() {
       exit={{ width: 0, opacity: 0 }}
       className="flex h-full flex-col border-l border-border bg-card overflow-hidden"
     >
-      {/* Header */}
       <div className="flex items-center justify-between border-b border-border px-4 py-3">
         <div className="flex items-center gap-2">
           <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary/20">
             <Bot className="h-4 w-4 text-primary" />
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-foreground">Neural Assistant</h3>
+            <h3 className="text-sm font-semibold text-foreground">{t('chat.title')}</h3>
             <p className="text-[10px] text-muted-foreground font-mono">{modelName}</p>
           </div>
         </div>
@@ -97,13 +93,12 @@ export function ChatPanel() {
         </button>
       </div>
 
-      {/* Messages */}
       <div ref={scrollRef} className="flex-1 overflow-auto p-4 space-y-4">
         {chatMessages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-center">
             <Sparkles className="h-8 w-8 text-primary/30 mb-3" />
-            <p className="text-sm text-muted-foreground">Ask me about your project, script ideas, or creative direction.</p>
-            <p className="text-xs text-muted-foreground/50 mt-1 font-mono">Powered by {modelName}</p>
+            <p className="text-sm text-muted-foreground">{t('chat.empty')}</p>
+            <p className="text-xs text-muted-foreground/50 mt-1 font-mono">{t('chat.powered')} {modelName}</p>
           </div>
         )}
         {chatMessages.map((msg) => (
@@ -120,7 +115,13 @@ export function ChatPanel() {
                   : 'bg-secondary text-secondary-foreground'
               }`}
             >
-              <div className="whitespace-pre-wrap">{msg.content}</div>
+              {msg.role === 'assistant' ? (
+                <div className="prose prose-sm prose-invert max-w-none [&>p]:mb-2 [&>ul]:mb-2 [&>ol]:mb-2 [&>h1]:text-base [&>h2]:text-sm [&>h3]:text-sm [&>code]:text-primary [&>pre]:bg-background [&>pre]:rounded [&>pre]:p-2 [&>blockquote]:border-primary/30">
+                  <ReactMarkdown>{msg.content}</ReactMarkdown>
+                </div>
+              ) : (
+                <div className="whitespace-pre-wrap">{msg.content}</div>
+              )}
             </div>
             {msg.role === 'user' && (
               <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-secondary mt-1">
@@ -145,14 +146,13 @@ export function ChatPanel() {
         )}
       </div>
 
-      {/* Input */}
       <div className="border-t border-border p-3">
         <div className="flex gap-2">
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
-            placeholder="Ask the Neural Assistant..."
+            placeholder={t('chat.placeholder')}
             disabled={isLoading}
             className="flex-1 rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none disabled:opacity-50"
           />

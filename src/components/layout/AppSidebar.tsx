@@ -1,28 +1,28 @@
-import { FileText, Clapperboard, Clock, Bot, Activity, ChevronRight } from 'lucide-react';
+import { FileText, Clapperboard, Clock, Bot, Activity } from 'lucide-react';
 import { useProjectStore, ViewMode } from '@/store/useProjectStore';
+import { useI18n } from '@/i18n/useI18n';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 
-const navItems: { view: ViewMode; icon: typeof FileText; label: string; sublabel: string }[] = [
-  { view: 'architect', icon: FileText, label: 'Architect', sublabel: 'Script & Scenes' },
-  { view: 'studio', icon: Clapperboard, label: 'Studio', sublabel: 'Asset Generation' },
-  { view: 'timeline', icon: Clock, label: 'Timeline', sublabel: 'Edit & Compose' },
-];
-
 export function AppSidebar() {
   const { currentView, setView, toggleChat, isChatOpen, logs } = useProjectStore();
+  const { t } = useI18n();
   const recentErrors = logs.filter((l) => l.level === 'error').length;
+
+  const navItems: { view: ViewMode; icon: typeof FileText; labelKey: 'nav.architect' | 'nav.studio' | 'nav.timeline' }[] = [
+    { view: 'architect', icon: FileText, labelKey: 'nav.architect' },
+    { view: 'studio', icon: Clapperboard, labelKey: 'nav.studio' },
+    { view: 'timeline', icon: Clock, labelKey: 'nav.timeline' },
+  ];
 
   return (
     <div className="flex h-full w-16 flex-col items-center border-r border-border bg-card py-4 gap-2">
-      {/* Logo */}
       <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-md bg-primary/20 border border-primary/30">
         <Activity className="h-5 w-5 text-primary" />
       </div>
 
-      {/* Nav */}
       <nav className="flex flex-1 flex-col gap-1">
-        {navItems.map(({ view, icon: Icon, label }) => {
+        {navItems.map(({ view, icon: Icon, labelKey }) => {
           const active = currentView === view;
           return (
             <button
@@ -34,7 +34,7 @@ export function AppSidebar() {
                   ? 'bg-primary/20 text-primary glow-primary'
                   : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
               )}
-              title={label}
+              title={t(labelKey)}
             >
               <Icon className="h-5 w-5" />
               {active && (
@@ -48,7 +48,6 @@ export function AppSidebar() {
         })}
       </nav>
 
-      {/* Chat toggle */}
       <button
         onClick={toggleChat}
         className={cn(
@@ -57,7 +56,7 @@ export function AppSidebar() {
             ? 'bg-primary/20 text-primary'
             : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
         )}
-        title="Neural Assistant"
+        title={t('nav.assistant')}
       >
         <Bot className="h-5 w-5" />
         {recentErrors > 0 && (

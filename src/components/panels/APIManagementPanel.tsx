@@ -1,4 +1,5 @@
 import { useAPIStore } from '@/store/useAPIStore';
+import { useI18n } from '@/i18n/useI18n';
 import {
   AI_PROVIDERS,
   getModelsWithCapability,
@@ -6,12 +7,12 @@ import {
   ModelPreferences,
 } from '@/services/apiRegistry';
 import {
-  Settings2, Zap, Activity, Clock, AlertTriangle, CheckCircle,
-  XCircle, ChevronDown, BarChart3, Cpu, Image, MessageSquare,
+  Settings2, Activity, Clock, AlertTriangle, CheckCircle,
+  XCircle, BarChart3, Cpu, Image, MessageSquare,
   Sparkles, Eye, Wand2, RotateCcw, X
 } from 'lucide-react';
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
 const taskConfig: {
@@ -29,17 +30,18 @@ const taskConfig: {
 ];
 
 const speedBadge = (speed: string) => {
-  const colors = { fast: 'bg-success/20 text-success', balanced: 'bg-warning/20 text-warning', slow: 'bg-primary/20 text-primary' };
-  return colors[speed as keyof typeof colors] || '';
+  const colors: Record<string, string> = { fast: 'bg-success/20 text-success', balanced: 'bg-warning/20 text-warning', slow: 'bg-primary/20 text-primary' };
+  return colors[speed] || '';
 };
 
 const costBadge = (cost: string) => {
-  const colors = { 'free-tier': 'bg-success/20 text-success', low: 'bg-success/20 text-success', medium: 'bg-warning/20 text-warning', high: 'bg-destructive/20 text-destructive' };
-  return colors[cost as keyof typeof colors] || '';
+  const colors: Record<string, string> = { 'free-tier': 'bg-success/20 text-success', low: 'bg-success/20 text-success', medium: 'bg-warning/20 text-warning', high: 'bg-destructive/20 text-destructive' };
+  return colors[cost] || '';
 };
 
 export function APIManagementPanel({ onClose }: { onClose: () => void }) {
   const { preferences, setPreference, resetPreferences, callLogs, totalCalls, totalErrors, avgLatency, clearCallLogs } = useAPIStore();
+  const { t } = useI18n();
   const [activeTab, setActiveTab] = useState<'models' | 'providers' | 'logs'>('models');
 
   return (
@@ -56,15 +58,14 @@ export function APIManagementPanel({ onClose }: { onClose: () => void }) {
         onClick={(e) => e.stopPropagation()}
         className="relative w-full max-w-4xl mx-4 max-h-[85vh] overflow-hidden rounded-lg border border-border bg-card"
       >
-        {/* Header */}
         <div className="flex items-center justify-between border-b border-border px-6 py-4">
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/20 border border-primary/30">
               <Settings2 className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <h2 className="text-base font-semibold text-foreground">API Management</h2>
-              <p className="text-xs text-muted-foreground font-mono">Multi-Provider AI Configuration</p>
+              <h2 className="text-base font-semibold text-foreground">{t('api.title')}</h2>
+              <p className="text-xs text-muted-foreground font-mono">{t('api.subtitle')}</p>
             </div>
           </div>
           <button onClick={onClose} className="rounded-md p-2 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors">
@@ -72,13 +73,12 @@ export function APIManagementPanel({ onClose }: { onClose: () => void }) {
           </button>
         </div>
 
-        {/* Stats Bar */}
         <div className="grid grid-cols-4 gap-px border-b border-border bg-border">
           {[
-            { icon: BarChart3, label: 'Total Calls', value: totalCalls, color: 'text-primary' },
-            { icon: CheckCircle, label: 'Success Rate', value: totalCalls > 0 ? `${Math.round(((totalCalls - totalErrors) / totalCalls) * 100)}%` : '—', color: 'text-success' },
-            { icon: Clock, label: 'Avg Latency', value: avgLatency > 0 ? `${avgLatency}ms` : '—', color: 'text-warning' },
-            { icon: AlertTriangle, label: 'Errors', value: totalErrors, color: 'text-destructive' },
+            { icon: BarChart3, label: t('api.totalcalls'), value: totalCalls, color: 'text-primary' },
+            { icon: CheckCircle, label: t('api.success'), value: totalCalls > 0 ? `${Math.round(((totalCalls - totalErrors) / totalCalls) * 100)}%` : '—', color: 'text-success' },
+            { icon: Clock, label: t('api.latency'), value: avgLatency > 0 ? `${avgLatency}ms` : '—', color: 'text-warning' },
+            { icon: AlertTriangle, label: t('api.errors'), value: totalErrors, color: 'text-destructive' },
           ].map(({ icon: Icon, label, value, color }) => (
             <div key={label} className="bg-card px-4 py-3">
               <div className="flex items-center gap-2 mb-1">
@@ -90,34 +90,36 @@ export function APIManagementPanel({ onClose }: { onClose: () => void }) {
           ))}
         </div>
 
-        {/* Tabs */}
         <div className="flex border-b border-border">
-          {(['models', 'providers', 'logs'] as const).map((tab) => (
+          {([
+            { key: 'models' as const, label: t('api.models') },
+            { key: 'providers' as const, label: t('api.providers') },
+            { key: 'logs' as const, label: t('api.logs') },
+          ]).map(({ key, label }) => (
             <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
+              key={key}
+              onClick={() => setActiveTab(key)}
               className={cn(
                 'flex-1 px-4 py-2.5 text-xs font-medium uppercase tracking-wider transition-colors',
-                activeTab === tab ? 'text-primary border-b-2 border-primary bg-primary/5' : 'text-muted-foreground hover:text-foreground'
+                activeTab === key ? 'text-primary border-b-2 border-primary bg-primary/5' : 'text-muted-foreground hover:text-foreground'
               )}
             >
-              {tab}
+              {label}
             </button>
           ))}
         </div>
 
-        {/* Content */}
         <div className="overflow-auto max-h-[calc(85vh-220px)] p-6">
           {activeTab === 'models' && (
             <div className="space-y-4">
               <div className="flex items-center justify-between mb-4">
-                <p className="text-sm text-muted-foreground">Select which AI model to use for each task</p>
+                <p className="text-sm text-muted-foreground">{t('api.select')}</p>
                 <button
                   onClick={resetPreferences}
                   className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
                 >
                   <RotateCcw className="h-3 w-3" />
-                  Reset Defaults
+                  {t('api.reset')}
                 </button>
               </div>
 
@@ -136,12 +138,8 @@ export function APIManagementPanel({ onClose }: { onClose: () => void }) {
                       </div>
                       {currentModel && (
                         <div className="flex items-center gap-1.5">
-                          <span className={`text-[10px] rounded-full px-2 py-0.5 ${speedBadge(currentModel.speed)}`}>
-                            {currentModel.speed}
-                          </span>
-                          <span className={`text-[10px] rounded-full px-2 py-0.5 ${costBadge(currentModel.costTier)}`}>
-                            ${currentModel.costTier}
-                          </span>
+                          <span className={`text-[10px] rounded-full px-2 py-0.5 ${speedBadge(currentModel.speed)}`}>{currentModel.speed}</span>
+                          <span className={`text-[10px] rounded-full px-2 py-0.5 ${costBadge(currentModel.costTier)}`}>${currentModel.costTier}</span>
                         </div>
                       )}
                     </div>
@@ -191,13 +189,9 @@ export function APIManagementPanel({ onClose }: { onClose: () => void }) {
                         </div>
                         <div className="flex items-center gap-1.5 shrink-0">
                           {model.capabilities.map((cap) => (
-                            <span key={cap} className="rounded bg-secondary px-1.5 py-0.5 text-[9px] font-mono text-muted-foreground">
-                              {cap}
-                            </span>
+                            <span key={cap} className="rounded bg-secondary px-1.5 py-0.5 text-[9px] font-mono text-muted-foreground">{cap}</span>
                           ))}
-                          <span className={`rounded-full px-1.5 py-0.5 text-[9px] ${speedBadge(model.speed)}`}>
-                            {model.speed}
-                          </span>
+                          <span className={`rounded-full px-1.5 py-0.5 text-[9px] ${speedBadge(model.speed)}`}>{model.speed}</span>
                         </div>
                       </div>
                     ))}
@@ -210,19 +204,19 @@ export function APIManagementPanel({ onClose }: { onClose: () => void }) {
           {activeTab === 'logs' && (
             <div>
               <div className="flex items-center justify-between mb-4">
-                <p className="text-sm text-muted-foreground">{callLogs.length} API calls logged</p>
+                <p className="text-sm text-muted-foreground">{callLogs.length} {t('api.logged')}</p>
                 <button
                   onClick={clearCallLogs}
                   className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
                 >
-                  Clear Logs
+                  {t('api.clearlogs')}
                 </button>
               </div>
 
               {callLogs.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground/40">
                   <Activity className="mx-auto h-8 w-8 mb-2" />
-                  <p className="text-sm">No API calls yet. Start generating to see logs here.</p>
+                  <p className="text-sm">{t('api.nocalls')}</p>
                 </div>
               ) : (
                 <div className="space-y-1">

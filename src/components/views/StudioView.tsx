@@ -1,16 +1,16 @@
 import { useProjectStore } from '@/store/useProjectStore';
 import { useAPIStore } from '@/store/useAPIStore';
-import { Image, Mic, Video, Play, Loader2, Zap, Layers, Check, AlertCircle, Eye, Wand2 } from 'lucide-react';
+import { useI18n } from '@/i18n/useI18n';
+import { Image, Mic, Video, Loader2, Zap, Layers, Check, AlertCircle, Eye, Wand2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useState } from 'react';
 import { generateImage } from '@/services/aiService';
 import { getModelById } from '@/services/apiRegistry';
 
-const sceneColors = ['from-indigo-900/40 to-purple-900/40', 'from-cyan-900/40 to-blue-900/40', 'from-emerald-900/40 to-teal-900/40', 'from-amber-900/40 to-orange-900/40'];
-
 export function StudioView({ onOpenImageLab }: { onOpenImageLab: (sceneId: string) => void }) {
   const { scenes, updateScene, addLog, addAsset } = useProjectStore();
   const { preferences, addCallLog } = useAPIStore();
+  const { t } = useI18n();
   const [generatingAssets, setGeneratingAssets] = useState<Record<string, Record<string, boolean>>>({});
   const [sceneImages, setSceneImages] = useState<Record<string, string>>({});
 
@@ -19,7 +19,7 @@ export function StudioView({ onOpenImageLab }: { onOpenImageLab: (sceneId: strin
       <div className="flex h-full items-center justify-center">
         <div className="text-center">
           <Layers className="mx-auto mb-3 h-12 w-12 text-muted-foreground/30" />
-          <p className="text-sm text-muted-foreground">Generate a script in the Architect first.</p>
+          <p className="text-sm text-muted-foreground">{t('studio.empty')}</p>
         </div>
       </div>
     );
@@ -50,7 +50,6 @@ export function StudioView({ onOpenImageLab }: { onOpenImageLab: (sceneId: strin
         addCallLog({ function: 'generate-image', model: result.model || model, status: 'success', latencyMs: result.latencyMs || 0 });
       }
     } else {
-      // Simulate audio/video (TTS and video gen not yet available via gateway)
       addLog('info', `Generating ${type} for scene ${scene.sceneNumber} (simulated)...`);
       const delay = type === 'video' ? 3000 : 2000;
       await new Promise((r) => setTimeout(r, delay));
@@ -79,9 +78,9 @@ export function StudioView({ onOpenImageLab }: { onOpenImageLab: (sceneId: strin
       <div className="border-b border-border p-6">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="mb-1 text-lg font-semibold text-foreground">Asset Studio</h2>
+            <h2 className="mb-1 text-lg font-semibold text-foreground">{t('studio.title')}</h2>
             <p className="text-sm text-muted-foreground">
-              Generate assets using <span className="text-primary font-mono text-xs">{getModelById(preferences.imageGeneration)?.name}</span>
+              {t('studio.desc')} <span className="text-primary font-mono text-xs">{getModelById(preferences.imageGeneration)?.name}</span>
             </p>
           </div>
           <button
@@ -89,7 +88,7 @@ export function StudioView({ onOpenImageLab }: { onOpenImageLab: (sceneId: strin
             className="flex items-center gap-2 rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-all hover:bg-primary/90 glow-primary"
           >
             <Zap className="h-4 w-4" />
-            Generate All Images
+            {t('studio.genall')}
           </button>
         </div>
       </div>
@@ -126,7 +125,7 @@ export function StudioView({ onOpenImageLab }: { onOpenImageLab: (sceneId: strin
               <div className="flex gap-4 p-4">
                 <div
                   className={`relative h-36 w-64 shrink-0 rounded-md border border-border overflow-hidden group cursor-pointer ${
-                    sceneImages[scene.id] ? '' : `bg-gradient-to-br ${sceneColors[i % sceneColors.length]}`
+                    sceneImages[scene.id] ? '' : 'bg-secondary/50'
                   }`}
                   onClick={() => scene.status.image === 'ready' && onOpenImageLab(scene.id)}
                 >
@@ -137,7 +136,7 @@ export function StudioView({ onOpenImageLab }: { onOpenImageLab: (sceneId: strin
                     <div className="absolute inset-0 flex items-center justify-center bg-background/60 backdrop-blur-sm">
                       <div className="text-center">
                         <Loader2 className="mx-auto h-6 w-6 animate-spin text-primary mb-1" />
-                        <span className="text-[10px] font-mono text-muted-foreground">Generating...</span>
+                        <span className="text-[10px] font-mono text-muted-foreground">{t('common.generating')}</span>
                       </div>
                     </div>
                   )}
@@ -150,10 +149,10 @@ export function StudioView({ onOpenImageLab }: { onOpenImageLab: (sceneId: strin
                     <div className="absolute inset-0 flex items-center justify-center bg-background/60 opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm">
                       <div className="flex gap-2">
                         <button className="flex items-center gap-1 rounded bg-primary/20 px-2 py-1 text-[10px] font-medium text-primary">
-                          <Eye className="h-3 w-3" /> View
+                          <Eye className="h-3 w-3" /> {t('studio.view')}
                         </button>
                         <button className="flex items-center gap-1 rounded bg-primary/20 px-2 py-1 text-[10px] font-medium text-primary">
-                          <Wand2 className="h-3 w-3" /> Edit
+                          <Wand2 className="h-3 w-3" /> {t('studio.edit')}
                         </button>
                       </div>
                     </div>
@@ -175,9 +174,9 @@ export function StudioView({ onOpenImageLab }: { onOpenImageLab: (sceneId: strin
                   <p className="text-xs text-muted-foreground/60 italic mb-4 line-clamp-1">"{scene.voiceOverScript}"</p>
                   <div className="flex gap-2">
                     {[
-                      { type: 'image' as const, icon: Image, label: 'Image' },
-                      { type: 'audio' as const, icon: Mic, label: 'Audio' },
-                      { type: 'video' as const, icon: Video, label: 'Video' },
+                      { type: 'image' as const, icon: Image, label: t('common.image') },
+                      { type: 'audio' as const, icon: Mic, label: t('common.audio') },
+                      { type: 'video' as const, icon: Video, label: t('common.video') },
                     ].map(({ type, icon: Icon, label }) => {
                       const isGen = generatingAssets[scene.id]?.[type];
                       const isReady = scene.status[type] === 'ready';
@@ -193,7 +192,7 @@ export function StudioView({ onOpenImageLab }: { onOpenImageLab: (sceneId: strin
                           }`}
                         >
                           {isGen ? <Loader2 className="h-3 w-3 animate-spin" /> : <Icon className="h-3 w-3" />}
-                          {isGen ? 'Working...' : isReady ? `${label} ✓` : `Gen ${label}`}
+                          {isGen ? t('studio.working') : isReady ? `${label} ✓` : `${t('studio.gen')} ${label}`}
                         </button>
                       );
                     })}

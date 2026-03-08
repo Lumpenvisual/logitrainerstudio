@@ -1,4 +1,5 @@
 import { useProjectStore } from '@/store/useProjectStore';
+import { useI18n } from '@/i18n/useI18n';
 import { Terminal, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -11,13 +12,14 @@ const levelColors: Record<string, string> = {
 
 export function LogConsole() {
   const { logs, clearLogs } = useProjectStore();
+  const { t } = useI18n();
 
   return (
     <div className="flex h-36 flex-col border-t border-border bg-card">
       <div className="flex items-center justify-between border-b border-border px-4 py-1.5">
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <Terminal className="h-3 w-3" />
-          <span className="font-mono uppercase tracking-wider">System Log</span>
+          <span className="font-mono uppercase tracking-wider">{t('log.title')}</span>
           <span className="rounded bg-secondary px-1.5 py-0.5 text-[10px] font-mono">{logs.length}</span>
         </div>
         <button onClick={clearLogs} className="text-muted-foreground hover:text-foreground transition-colors">
@@ -26,7 +28,7 @@ export function LogConsole() {
       </div>
       <div className="flex-1 overflow-auto p-2 font-mono text-xs">
         {logs.length === 0 && (
-          <div className="flex h-full items-center justify-center text-muted-foreground/40">No logs yet</div>
+          <div className="flex h-full items-center justify-center text-muted-foreground/40">{t('log.empty')}</div>
         )}
         {logs.map((log) => (
           <div key={log.id} className="flex gap-2 py-0.5">
