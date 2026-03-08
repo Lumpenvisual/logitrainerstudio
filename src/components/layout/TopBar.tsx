@@ -1,8 +1,9 @@
 import { useProjectStore } from '@/store/useProjectStore';
 import { useAPIStore } from '@/store/useAPIStore';
 import { useI18n } from '@/i18n/useI18n';
+import { useAuth } from '@/hooks/useAuth';
 import { Locale } from '@/i18n/translations';
-import { Zap, ChevronRight, Settings2, Activity, Keyboard } from 'lucide-react';
+import { Zap, ChevronRight, Settings2, Activity, Keyboard, LogOut, Save } from 'lucide-react';
 
 const localeLabels: Record<Locale, string> = { en: 'EN', fr: 'FR', es: 'ES' };
 const localeOrder: Locale[] = ['en', 'fr', 'es'];
