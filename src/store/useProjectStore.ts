@@ -47,9 +47,24 @@ export interface TimelineClip {
   volume?: number;
 }
 
+export interface TimelineMarker {
+  id: string;
+  time: number;
+  label: string;
+  color: string;
+}
+
+export interface ProjectSettings {
+  resolution: { width: number; height: number };
+  fps: number;
+  aspectRatio: string;
+  sampleRate: number;
+}
+
 export interface TimelineState {
   clips: TimelineClip[];
   transitions: TimelineTransition[];
+  markers: TimelineMarker[];
   playheadPosition: number;
   zoom: number;
   isPlaying: boolean;
