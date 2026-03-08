@@ -1,11 +1,40 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useProjectStore } from '@/store/useProjectStore';
+import { AppSidebar } from '@/components/layout/AppSidebar';
+import { TopBar } from '@/components/layout/TopBar';
+import { ArchitectView } from '@/components/views/ArchitectView';
+import { StudioView } from '@/components/views/StudioView';
+import { TimelineView } from '@/components/views/TimelineView';
+import { ChatPanel } from '@/components/panels/ChatPanel';
+import { LogConsole } from '@/components/panels/LogConsole';
+import { AnimatePresence } from 'framer-motion';
 
 const Index = () => {
+  const { currentView, isChatOpen } = useProjectStore();
+
+  const renderView = () => {
+    switch (currentView) {
+      case 'architect': return <ArchitectView />;
+      case 'studio': return <StudioView />;
+      case 'timeline': return <TimelineView />;
+    }
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
+    <div className="flex h-screen w-screen overflow-hidden bg-background">
+      <AppSidebar />
+      <div className="flex flex-1 flex-col overflow-hidden">
+        <TopBar />
+        <div className="flex flex-1 overflow-hidden">
+          <div className="flex flex-1 flex-col overflow-hidden">
+            <div className="flex-1 overflow-hidden">
+              {renderView()}
+            </div>
+            <LogConsole />
+          </div>
+          <AnimatePresence>
+            {isChatOpen && <ChatPanel />}
+          </AnimatePresence>
+        </div>
       </div>
     </div>
   );
