@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      alert_settings: {
+        Row: {
+          alerts_enabled: boolean
+          cost_threshold: number
+          created_at: string
+          failure_count_threshold: number
+          failure_window_minutes: number
+          id: string
+          latency_threshold_ms: number
+          quota_warning_percent: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          alerts_enabled?: boolean
+          cost_threshold?: number
+          created_at?: string
+          failure_count_threshold?: number
+          failure_window_minutes?: number
+          id?: string
+          latency_threshold_ms?: number
+          quota_warning_percent?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          alerts_enabled?: boolean
+          cost_threshold?: number
+          created_at?: string
+          failure_count_threshold?: number
+          failure_window_minutes?: number
+          id?: string
+          latency_threshold_ms?: number
+          quota_warning_percent?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -70,6 +109,54 @@ export type Database = {
           timeline?: Json | null
           title?: string
           updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      smart_alerts: {
+        Row: {
+          alert_type: string
+          created_at: string
+          id: string
+          is_dismissed: boolean
+          is_read: boolean
+          message: string
+          metric_value: number | null
+          model_id: string | null
+          provider_id: string | null
+          severity: string
+          threshold_value: number | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          alert_type: string
+          created_at?: string
+          id?: string
+          is_dismissed?: boolean
+          is_read?: boolean
+          message: string
+          metric_value?: number | null
+          model_id?: string | null
+          provider_id?: string | null
+          severity?: string
+          threshold_value?: number | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          alert_type?: string
+          created_at?: string
+          id?: string
+          is_dismissed?: boolean
+          is_read?: boolean
+          message?: string
+          metric_value?: number | null
+          model_id?: string | null
+          provider_id?: string | null
+          severity?: string
+          threshold_value?: number | null
+          title?: string
           user_id?: string
         }
         Relationships: []

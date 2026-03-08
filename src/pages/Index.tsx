@@ -11,7 +11,9 @@ import { LogConsole } from '@/components/panels/LogConsole';
 import { WelcomeScreen } from '@/components/views/WelcomeScreen';
 import { ImageLab } from '@/components/views/ImageLab';
 import { APIManagementPanel } from '@/components/panels/APIManagementPanel';
-import { AnimatePresence } from 'framer-motion';
+import { AlertsPanel } from '@/components/panels/AlertsPanel';
+import { AnimatePresence, motion } from 'framer-motion';
+import { useAlertEngine } from '@/hooks/useAlertEngine';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Navigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
@@ -23,10 +25,14 @@ const Index = () => {
   const [showWelcome, setShowWelcome] = useState(true);
   const [imageLabSceneId, setImageLabSceneId] = useState<string | null>(null);
   const [showAPIPanel, setShowAPIPanel] = useState(false);
+  const [showAlerts, setShowAlerts] = useState(false);
   const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
   const [recentProjects, setRecentProjects] = useState<any[]>([]);
 
   const imageLabScene = imageLabSceneId ? scenes.find((s) => s.id === imageLabSceneId) ?? null : null;
+
+  // Smart alert engine — monitors API calls and triggers alerts
+  useAlertEngine();
 
   useEffect(() => {
     if (user) {
@@ -101,7 +107,7 @@ const Index = () => {
   return (
     <>
       <div className="flex h-screen w-screen overflow-hidden bg-background">
-        <AppSidebar />
+        <AppSidebar onToggleAlerts={() => setShowAlerts(!showAlerts)} isAlertsOpen={showAlerts} />
         <div className="flex flex-1 flex-col overflow-hidden">
           <TopBar onOpenAPIPanel={() => setShowAPIPanel(true)} onSave={handleSave} />
           <div className="flex flex-1 overflow-hidden">
@@ -111,6 +117,19 @@ const Index = () => {
               </div>
               <LogConsole />
             </div>
+            <AnimatePresence>
+              {showAlerts && (
+                <motion.div
+                  initial={{ width: 0, opacity: 0 }}
+                  animate={{ width: 340, opacity: 1 }}
+                  exit={{ width: 0, opacity: 0 }}
+                  transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                  className="h-full border-l border-border bg-card/50 overflow-hidden"
+                >
+                  <AlertsPanel />
+                </motion.div>
+              )}
+            </AnimatePresence>
             <AnimatePresence>
               {isChatOpen && <ChatPanel />}
             </AnimatePresence>
