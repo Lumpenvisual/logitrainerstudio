@@ -472,6 +472,12 @@ export function TimelineView() {
                 </div>
                 <div className="relative flex-1 bg-background/30" style={{ minHeight: 64 }}>
                   <div className="absolute top-0 bottom-0 w-px bg-primary/80 z-10 pointer-events-none" style={{ left: timeline.playheadPosition * pxPerSec }} />
+                  {/* Magnetic snap line */}
+                  {snapLine !== null && (
+                    <div className="absolute top-0 bottom-0 w-px bg-yellow-400 z-20 pointer-events-none opacity-80" style={{ left: snapLine * pxPerSec }}>
+                      <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-yellow-400" />
+                    </div>
+                  )}
 
                   {trackClips.map((clip, idx) => {
                     const scene = scenes.find((s) => s.id === clip.assetId);
