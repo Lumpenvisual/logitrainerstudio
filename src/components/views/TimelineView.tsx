@@ -41,7 +41,8 @@ export function TimelineView() {
   const {
     timeline, setPlayhead, setZoom, togglePlay, scenes, addClip, addLog, updateClip,
     removeClip, duplicateClip, selectedClipId, setSelectedClipId, addAsset,
-    addTransition, removeTransition, updateTransition, selectedTransitionId, setSelectedTransitionId
+    addTransition, removeTransition, updateTransition, selectedTransitionId, setSelectedTransitionId,
+    addMarker, removeMarker
   } = useProjectStore();
   const { t } = useI18n();
   const rulerRef = useRef<HTMLCanvasElement>(null);
