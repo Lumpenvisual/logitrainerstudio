@@ -1,13 +1,22 @@
 import { useProjectStore, TimelineClip } from '@/store/useProjectStore';
 import { useI18n } from '@/i18n/useI18n';
-import { Play, Pause, SkipBack, SkipForward, ZoomIn, ZoomOut, Volume2, Film, Plus, GripVertical } from 'lucide-react';
+import { Play, Pause, SkipBack, SkipForward, ZoomIn, ZoomOut, Volume2, Film, Plus, GripVertical, Undo2, Redo2 } from 'lucide-react';
 import { useRef, useEffect, useCallback, useState } from 'react';
+
+type ResizeEdge = 'left' | 'right';
 
 interface DragState {
   clipId: string;
   offsetX: number;
   originalTrack: 'video' | 'audio';
   originalStartTime: number;
+}
+
+interface ResizeState {
+  clipId: string;
+  edge: ResizeEdge;
+  originalStartTime: number;
+  originalDuration: number;
 }
 
 export function TimelineView() {
@@ -18,9 +27,14 @@ export function TimelineView() {
   const [isRulerDragging, setIsRulerDragging] = useState(false);
   const [dragState, setDragState] = useState<DragState | null>(null);
   const [dragGhost, setDragGhost] = useState<{ x: number; y: number; track: 'video' | 'audio' } | null>(null);
+  const [resizeState, setResizeState] = useState<ResizeState | null>(null);
+  const [resizePreview, setResizePreview] = useState<{ startTime: number; duration: number } | null>(null);
 
   const pxPerSec = timeline.zoom;
   const totalWidth = Math.max(timeline.duration * pxPerSec, 800);
+
+  const canUndo = useProjectStore.temporal.getState().pastStates.length > 0;
+  const canRedo = useProjectStore.temporal.getState().futureStates.length > 0;
 
   const drawRuler = useCallback(() => {
     const canvas = rulerRef.current;
@@ -119,13 +133,14 @@ export function TimelineView() {
     return () => window.removeEventListener('keydown', handleKey);
   }, [togglePlay, setPlayhead, setZoom, timeline.playheadPosition, timeline.duration, timeline.zoom]);
 
-  // Drag and drop handlers
+  // --- Clip drag ---
   const handleClipDragStart = (e: React.MouseEvent, clip: TimelineClip) => {
+    if (resizeState) return;
     e.preventDefault();
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return;
     const scrollLeft = containerRef.current?.scrollLeft || 0;
-    const offsetX = e.clientX - rect.left + scrollLeft - clip.startTime * pxPerSec - 80; // 80 = track label width
+    const offsetX = e.clientX - rect.left + scrollLeft - clip.startTime * pxPerSec - 80;
 
     setDragState({
       clipId: clip.id,
@@ -145,8 +160,7 @@ export function TimelineView() {
       const x = e.clientX - rect.left + scrollLeft - 80;
       const y = e.clientY - rect.top;
 
-      // Determine which track based on y position (ruler=36, shortcut bar~28, each track=64)
-      const trackAreaY = y - 36 - 28; // offset for ruler + shortcut bar
+      const trackAreaY = y - 36 - 28;
       let track: 'video' | 'audio' = dragState.originalTrack;
       if (trackAreaY < 64) track = 'video';
       else if (trackAreaY < 128) track = 'audio';
@@ -157,7 +171,6 @@ export function TimelineView() {
 
     const handleMouseUp = () => {
       if (dragGhost && dragState) {
-        // Snap to 0.25s grid
         const snapped = Math.round(dragGhost.x * 4) / 4;
         updateClip(dragState.clipId, {
           startTime: Math.max(0, snapped),
@@ -176,6 +189,67 @@ export function TimelineView() {
       window.removeEventListener('mouseup', handleMouseUp);
     };
   }, [dragState, dragGhost, pxPerSec, timeline.duration, updateClip, addLog]);
+
+  // --- Clip resize ---
+  const handleResizeStart = (e: React.MouseEvent, clip: TimelineClip, edge: ResizeEdge) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setResizeState({
+      clipId: clip.id,
+      edge,
+      originalStartTime: clip.startTime,
+      originalDuration: clip.duration,
+    });
+    setResizePreview({ startTime: clip.startTime, duration: clip.duration });
+  };
+
+  useEffect(() => {
+    if (!resizeState) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const rect = containerRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const scrollLeft = containerRef.current?.scrollLeft || 0;
+      const mouseX = e.clientX - rect.left + scrollLeft - 80;
+      const mouseTime = mouseX / pxPerSec;
+
+      const MIN_DURATION = 0.5;
+
+      if (resizeState.edge === 'left') {
+        // Dragging left edge: changes startTime and duration
+        const maxNewStart = resizeState.originalStartTime + resizeState.originalDuration - MIN_DURATION;
+        const newStart = Math.max(0, Math.min(mouseTime, maxNewStart));
+        const snappedStart = Math.round(newStart * 4) / 4;
+        const newDuration = resizeState.originalDuration + (resizeState.originalStartTime - snappedStart);
+        setResizePreview({ startTime: snappedStart, duration: Math.max(MIN_DURATION, newDuration) });
+      } else {
+        // Dragging right edge: changes duration only
+        const endTime = mouseTime;
+        const newDuration = endTime - resizeState.originalStartTime;
+        const snappedDuration = Math.round(Math.max(MIN_DURATION, newDuration) * 4) / 4;
+        setResizePreview({ startTime: resizeState.originalStartTime, duration: snappedDuration });
+      }
+    };
+
+    const handleMouseUp = () => {
+      if (resizePreview && resizeState) {
+        updateClip(resizeState.clipId, {
+          startTime: resizePreview.startTime,
+          duration: resizePreview.duration,
+        });
+        addLog('info', `Resized clip: ${resizePreview.duration.toFixed(2)}s starting at ${resizePreview.startTime.toFixed(2)}s`);
+      }
+      setResizeState(null);
+      setResizePreview(null);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [resizeState, resizePreview, pxPerSec, updateClip, addLog]);
 
   const handleRulerClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const rect = rulerRef.current?.getBoundingClientRect();
@@ -212,7 +286,16 @@ export function TimelineView() {
   ];
 
   const getClipStyle = (clip: TimelineClip) => {
-    // If this clip is being dragged, show ghost position
+    // Resize preview
+    if (resizeState?.clipId === clip.id && resizePreview) {
+      return {
+        left: resizePreview.startTime * pxPerSec,
+        width: resizePreview.duration * pxPerSec,
+        opacity: 0.85,
+        zIndex: 50,
+      };
+    }
+    // Drag ghost
     if (dragState?.clipId === clip.id && dragGhost) {
       return {
         left: dragGhost.x * pxPerSec,
@@ -235,6 +318,21 @@ export function TimelineView() {
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between border-b border-border bg-card px-4 py-2">
         <div className="flex items-center gap-1">
+          <button
+            onClick={() => useProjectStore.temporal.getState().undo()}
+            className="rounded p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed"
+            title="Undo (Ctrl+Z)"
+          >
+            <Undo2 className="h-4 w-4" />
+          </button>
+          <button
+            onClick={() => useProjectStore.temporal.getState().redo()}
+            className="rounded p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed"
+            title="Redo (Ctrl+Shift+Z)"
+          >
+            <Redo2 className="h-4 w-4" />
+          </button>
+          <div className="w-px h-5 bg-border mx-1" />
           <button onClick={() => setPlayhead(0)} className="rounded p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground" title={t('timeline.start')}>
             <SkipBack className="h-4 w-4" />
           </button>
@@ -274,8 +372,9 @@ export function TimelineView() {
           { key: 'Space', action: t('timeline.play') },
           { key: '←→', action: t('timeline.seek') },
           { key: '+−', action: t('timeline.zoom') },
-          { key: 'Home', action: t('timeline.start') },
-          { key: 'Drag', action: 'Move clips' },
+          { key: '⌘Z', action: 'Undo' },
+          { key: '⌘⇧Z', action: 'Redo' },
+          { key: 'Drag edge', action: 'Resize' },
         ].map(({ key, action }) => (
           <span key={key} className="text-[10px] text-muted-foreground/50">
             <kbd className="rounded bg-border/50 px-1 py-0.5 font-mono text-[9px] text-muted-foreground">{key}</kbd>{' '}{action}
@@ -297,7 +396,6 @@ export function TimelineView() {
 
           {tracks.map(({ label, fullLabel, icon: Icon, trackKey, gradient, borderColor, hoverBorder }) => {
             const trackClips = timeline.clips.filter((c) => {
-              // Show clip in its ghost track when dragging
               if (dragState?.clipId === c.id && dragGhost) {
                 return dragGhost.track === trackKey;
               }
@@ -317,29 +415,53 @@ export function TimelineView() {
                   {trackClips.map((clip, idx) => {
                     const scene = scenes.find((s) => s.id === clip.assetId);
                     const isDragged = dragState?.clipId === clip.id;
+                    const isResizing = resizeState?.clipId === clip.id;
                     const style = getClipStyle(clip);
+                    const isActive = isDragged || isResizing;
 
                     return (
                       <div
                         key={clip.id}
-                        className={`absolute top-1.5 bottom-1.5 rounded border ${isDragged ? hoverBorder : borderColor} bg-gradient-to-r ${gradient} flex items-center px-2 select-none transition-shadow ${isDragged ? 'shadow-lg shadow-primary/20 ring-1 ring-primary/30' : 'hover:shadow-lg hover:shadow-primary/10'}`}
+                        className={`absolute top-1.5 bottom-1.5 rounded border ${isActive ? hoverBorder : borderColor} bg-gradient-to-r ${gradient} flex items-center select-none transition-shadow ${isActive ? 'shadow-lg shadow-primary/20 ring-1 ring-primary/30' : 'hover:shadow-lg hover:shadow-primary/10'} group`}
                         style={style}
                         onMouseDown={(e) => handleClipDragStart(e, clip)}
                       >
-                        <GripVertical className="h-3 w-3 text-muted-foreground/40 shrink-0 cursor-grab active:cursor-grabbing mr-1" />
-                        <div className="flex items-center gap-1.5 min-w-0">
-                          <span className="text-[10px] font-mono font-bold text-foreground/70 shrink-0">S{scene?.sceneNumber || idx + 1}</span>
-                          {clip.duration * pxPerSec > 80 && (
-                            <span className="text-[9px] font-mono text-muted-foreground truncate">{clip.duration}s</span>
+                        {/* Left resize handle */}
+                        <div
+                          className="absolute left-0 top-0 bottom-0 w-2 cursor-col-resize z-20 flex items-center justify-center hover:bg-foreground/10 rounded-l transition-colors"
+                          onMouseDown={(e) => handleResizeStart(e, clip, 'left')}
+                        >
+                          <div className="w-0.5 h-4 bg-foreground/20 rounded-full group-hover:bg-foreground/40 transition-colors" />
+                        </div>
+
+                        <div className="flex items-center px-3 min-w-0 flex-1">
+                          <GripVertical className="h-3 w-3 text-muted-foreground/40 shrink-0 cursor-grab active:cursor-grabbing mr-1" />
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className="text-[10px] font-mono font-bold text-foreground/70 shrink-0">S{scene?.sceneNumber || idx + 1}</span>
+                            {(style.width || 0) > 80 && (
+                              <span className="text-[9px] font-mono text-muted-foreground truncate">
+                                {resizeState?.clipId === clip.id && resizePreview
+                                  ? `${resizePreview.duration.toFixed(1)}s`
+                                  : `${clip.duration}s`}
+                              </span>
+                            )}
+                          </div>
+                          {trackKey === 'audio' && (style.width || 0) > 60 && (
+                            <div className="ml-2 flex items-center gap-px h-5 flex-1 overflow-hidden">
+                              {Array.from({ length: Math.floor((style.width || 0) / 4) }).map((_, j) => (
+                                <div key={j} className="w-0.5 bg-success/40 rounded-full shrink-0" style={{ height: `${Math.random() * 100}%`, minHeight: 2 }} />
+                              ))}
+                            </div>
                           )}
                         </div>
-                        {trackKey === 'audio' && clip.duration * pxPerSec > 60 && (
-                          <div className="ml-2 flex items-center gap-px h-5 flex-1 overflow-hidden">
-                            {Array.from({ length: Math.floor(clip.duration * pxPerSec / 4) }).map((_, j) => (
-                              <div key={j} className="w-0.5 bg-success/40 rounded-full shrink-0" style={{ height: `${Math.random() * 100}%`, minHeight: 2 }} />
-                            ))}
-                          </div>
-                        )}
+
+                        {/* Right resize handle */}
+                        <div
+                          className="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize z-20 flex items-center justify-center hover:bg-foreground/10 rounded-r transition-colors"
+                          onMouseDown={(e) => handleResizeStart(e, clip, 'right')}
+                        >
+                          <div className="w-0.5 h-4 bg-foreground/20 rounded-full group-hover:bg-foreground/40 transition-colors" />
+                        </div>
                       </div>
                     );
                   })}
