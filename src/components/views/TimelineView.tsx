@@ -1,8 +1,9 @@
-import { useProjectStore, TimelineClip } from '@/store/useProjectStore';
+import { useProjectStore, TimelineClip, TransitionType } from '@/store/useProjectStore';
 import { useI18n } from '@/i18n/useI18n';
-import { Play, Pause, SkipBack, SkipForward, ZoomIn, ZoomOut, Volume2, Film, Plus, GripVertical, Undo2, Redo2, Copy, Trash2 } from 'lucide-react';
+import { Play, Pause, SkipBack, SkipForward, ZoomIn, ZoomOut, Volume2, Film, Plus, GripVertical, Undo2, Redo2, Copy, Trash2, Upload, Shuffle } from 'lucide-react';
 import { useRef, useEffect, useCallback, useState } from 'react';
 import { PreviewMonitor } from './PreviewMonitor';
+import { toast } from 'sonner';
 
 type ResizeEdge = 'left' | 'right';
 
@@ -20,10 +21,28 @@ interface ResizeState {
   originalDuration: number;
 }
 
-const SNAP_THRESHOLD_PX = 8; // pixels within which snapping activates
+const SNAP_THRESHOLD_PX = 8;
+
+const TRANSITION_OPTIONS: { value: TransitionType; label: string; icon: string }[] = [
+  { value: 'none', label: 'Cut (None)', icon: '✂️' },
+  { value: 'fade', label: 'Fade', icon: '🌑' },
+  { value: 'dissolve', label: 'Dissolve', icon: '💫' },
+  { value: 'wipe-left', label: 'Wipe ←', icon: '◀' },
+  { value: 'wipe-right', label: 'Wipe →', icon: '▶' },
+  { value: 'wipe-up', label: 'Wipe ↑', icon: '▲' },
+  { value: 'wipe-down', label: 'Wipe ↓', icon: '▼' },
+  { value: 'zoom-in', label: 'Zoom In', icon: '🔍' },
+  { value: 'zoom-out', label: 'Zoom Out', icon: '🔎' },
+  { value: 'slide-left', label: 'Slide ←', icon: '⬅' },
+  { value: 'slide-right', label: 'Slide →', icon: '➡' },
+];
 
 export function TimelineView() {
-  const { timeline, setPlayhead, setZoom, togglePlay, scenes, addClip, addLog, updateClip, removeClip, duplicateClip, selectedClipId, setSelectedClipId } = useProjectStore();
+  const {
+    timeline, setPlayhead, setZoom, togglePlay, scenes, addClip, addLog, updateClip,
+    removeClip, duplicateClip, selectedClipId, setSelectedClipId, addAsset,
+    addTransition, removeTransition, updateTransition, selectedTransitionId, setSelectedTransitionId
+  } = useProjectStore();
   const { t } = useI18n();
   const rulerRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -34,14 +53,15 @@ export function TimelineView() {
   const [resizePreview, setResizePreview] = useState<{ startTime: number; duration: number } | null>(null);
   const [snapLine, setSnapLine] = useState<number | null>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; clipId: string } | null>(null);
+  const [transitionMenu, setTransitionMenu] = useState<{ x: number; y: number; fromClipId: string; toClipId: string } | null>(null);
+  const [fileDragOver, setFileDragOver] = useState<'video' | 'audio' | null>(null);
 
   const pxPerSec = timeline.zoom;
   const totalWidth = Math.max(timeline.duration * pxPerSec, 800);
   const snapThresholdSec = SNAP_THRESHOLD_PX / pxPerSec;
 
-  /** Get all snap points (edges of other clips on same track), excluding a given clipId */
   const getSnapPoints = useCallback((excludeClipId: string, track: 'video' | 'audio') => {
-    const points: number[] = [0]; // always snap to 0
+    const points: number[] = [0];
     timeline.clips.forEach((c) => {
       if (c.id === excludeClipId) return;
       if (c.track !== track) return;
@@ -51,7 +71,6 @@ export function TimelineView() {
     return points;
   }, [timeline.clips]);
 
-  /** Try to snap a time value to the nearest snap point */
   const trySnap = useCallback((time: number, points: number[]): { snapped: number; didSnap: boolean } => {
     let closest = time;
     let minDist = Infinity;
@@ -62,15 +81,11 @@ export function TimelineView() {
         closest = p;
       }
     }
-    if (minDist <= snapThresholdSec) {
-      return { snapped: closest, didSnap: true };
-    }
+    if (minDist <= snapThresholdSec) return { snapped: closest, didSnap: true };
     return { snapped: Math.round(time * 4) / 4, didSnap: false };
   }, [snapThresholdSec]);
 
-  const canUndo = useProjectStore.temporal.getState().pastStates.length > 0;
-  const canRedo = useProjectStore.temporal.getState().futureStates.length > 0;
-
+  // --- Ruler drawing ---
   const drawRuler = useCallback(() => {
     const canvas = rulerRef.current;
     if (!canvas) return;
@@ -100,7 +115,6 @@ export function TimelineView() {
     for (let sec = 0; sec <= timeline.duration; sec++) {
       const x = sec * pxPerSec;
       const isMajor = sec % 5 === 0;
-
       if (isMajor) {
         ctx.beginPath();
         ctx.strokeStyle = colorBorder;
@@ -108,7 +122,6 @@ export function TimelineView() {
         ctx.moveTo(x, 18);
         ctx.lineTo(x, 36);
         ctx.stroke();
-
         ctx.fillStyle = colorMutedFg;
         ctx.font = '10px JetBrains Mono, monospace';
         ctx.textAlign = 'center';
@@ -134,7 +147,6 @@ export function TimelineView() {
     ctx.lineTo(px - 3, 8);
     ctx.closePath();
     ctx.fill();
-
     ctx.beginPath();
     ctx.strokeStyle = colorPrimary;
     ctx.lineWidth = 2;
@@ -145,6 +157,7 @@ export function TimelineView() {
 
   useEffect(() => { drawRuler(); }, [drawRuler]);
 
+  // Playback
   useEffect(() => {
     if (!timeline.isPlaying) return;
     const interval = setInterval(() => {
@@ -153,6 +166,7 @@ export function TimelineView() {
     return () => clearInterval(interval);
   }, [timeline.isPlaying, timeline.playheadPosition, timeline.duration, setPlayhead]);
 
+  // Keyboard shortcuts
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
@@ -163,7 +177,6 @@ export function TimelineView() {
       if (e.code === 'ArrowRight') setPlayhead(Math.min(timeline.duration, timeline.playheadPosition + 1));
       if (e.code === 'Equal' || e.code === 'NumpadAdd') setZoom(Math.min(120, timeline.zoom + 10));
       if (e.code === 'Minus' || e.code === 'NumpadSubtract') setZoom(Math.max(20, timeline.zoom - 10));
-      // Clip delete/duplicate
       if (selectedClipId) {
         if (e.code === 'Delete' || e.code === 'Backspace') {
           e.preventDefault();
@@ -176,23 +189,46 @@ export function TimelineView() {
           duplicateClip(selectedClipId);
           addLog('info', 'Duplicated clip');
         }
+        // T key = add transition to next clip
+        if (e.key === 't' && !e.metaKey && !e.ctrlKey) {
+          e.preventDefault();
+          const clip = timeline.clips.find((c) => c.id === selectedClipId);
+          if (clip) {
+            const nextClip = timeline.clips
+              .filter((c) => c.track === clip.track && c.startTime > clip.startTime)
+              .sort((a, b) => a.startTime - b.startTime)[0];
+            if (nextClip) {
+              addTransition({ type: 'dissolve', duration: 0.5, fromClipId: clip.id, toClipId: nextClip.id });
+              addLog('info', 'Added dissolve transition');
+              toast.success('Dissolve transition added');
+            }
+          }
+        }
+      }
+      if (selectedTransitionId && (e.code === 'Delete' || e.code === 'Backspace')) {
+        e.preventDefault();
+        removeTransition(selectedTransitionId);
+        setSelectedTransitionId(null);
+        addLog('info', 'Removed transition');
       }
       if (e.code === 'Escape') {
         setSelectedClipId(null);
+        setSelectedTransitionId(null);
         setContextMenu(null);
+        setTransitionMenu(null);
       }
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [togglePlay, setPlayhead, setZoom, timeline.playheadPosition, timeline.duration, timeline.zoom, selectedClipId, removeClip, duplicateClip, addLog]);
+  }, [togglePlay, setPlayhead, setZoom, timeline.playheadPosition, timeline.duration, timeline.zoom, selectedClipId, selectedTransitionId, removeClip, duplicateClip, addLog, addTransition, removeTransition, timeline.clips]);
 
-  // Close context menu on outside click
+  // Close menus on outside click
   useEffect(() => {
-    if (!contextMenu) return;
-    const handler = () => setContextMenu(null);
+    if (!contextMenu && !transitionMenu) return;
+    const handler = () => { setContextMenu(null); setTransitionMenu(null); };
     window.addEventListener('click', handler);
     return () => window.removeEventListener('click', handler);
-  }, [contextMenu]);
+  }, [contextMenu, transitionMenu]);
 
   // --- Clip drag ---
   const handleClipDragStart = (e: React.MouseEvent, clip: TimelineClip) => {
@@ -202,143 +238,152 @@ export function TimelineView() {
     if (!rect) return;
     const scrollLeft = containerRef.current?.scrollLeft || 0;
     const offsetX = e.clientX - rect.left + scrollLeft - clip.startTime * pxPerSec - 80;
-
-    setDragState({
-      clipId: clip.id,
-      offsetX,
-      originalTrack: clip.track,
-      originalStartTime: clip.startTime,
-    });
+    setDragState({ clipId: clip.id, offsetX, originalTrack: clip.track, originalStartTime: clip.startTime });
   };
 
   useEffect(() => {
     if (!dragState) return;
-
     const handleMouseMove = (e: MouseEvent) => {
       const rect = containerRef.current?.getBoundingClientRect();
       if (!rect) return;
       const scrollLeft = containerRef.current?.scrollLeft || 0;
       const x = e.clientX - rect.left + scrollLeft - 80;
       const y = e.clientY - rect.top;
-
       const trackAreaY = y - 36 - 28;
       let track: 'video' | 'audio' = dragState.originalTrack;
       if (trackAreaY < 64) track = 'video';
       else if (trackAreaY < 128) track = 'audio';
-
       const rawTime = Math.max(0, Math.min((x - dragState.offsetX) / pxPerSec, timeline.duration - 0.5));
       const clip = timeline.clips.find(c => c.id === dragState.clipId);
       const clipDuration = clip?.duration || 1;
-
-      // Snap both left and right edges
       const snapPoints = getSnapPoints(dragState.clipId, track);
       const { snapped: leftSnap, didSnap: leftDid } = trySnap(rawTime, snapPoints);
       const { snapped: rightSnap, didSnap: rightDid } = trySnap(rawTime + clipDuration, snapPoints);
-
       let finalTime: number;
       if (leftDid && rightDid) {
-        // Pick the closer snap
         finalTime = Math.abs(rawTime - leftSnap) <= Math.abs((rawTime + clipDuration) - rightSnap) ? leftSnap : rightSnap - clipDuration;
-      } else if (leftDid) {
-        finalTime = leftSnap;
-      } else if (rightDid) {
-        finalTime = rightSnap - clipDuration;
-      } else {
-        finalTime = Math.round(rawTime * 4) / 4;
-      }
-
+      } else if (leftDid) { finalTime = leftSnap; }
+      else if (rightDid) { finalTime = rightSnap - clipDuration; }
+      else { finalTime = Math.round(rawTime * 4) / 4; }
       setSnapLine(leftDid || rightDid ? (leftDid ? finalTime : finalTime + clipDuration) : null);
       setDragGhost({ x: Math.max(0, finalTime), y: e.clientY, track });
     };
-
     const handleMouseUp = () => {
       if (dragGhost && dragState) {
-        updateClip(dragState.clipId, {
-          startTime: Math.max(0, dragGhost.x),
-          track: dragGhost.track,
-        });
+        updateClip(dragState.clipId, { startTime: Math.max(0, dragGhost.x), track: dragGhost.track });
         addLog('info', `Moved clip to ${dragGhost.track.toUpperCase()} track at ${dragGhost.x.toFixed(2)}s`);
       }
       setDragState(null);
       setDragGhost(null);
       setSnapLine(null);
     };
-
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-    };
+    return () => { window.removeEventListener('mousemove', handleMouseMove); window.removeEventListener('mouseup', handleMouseUp); };
   }, [dragState, dragGhost, pxPerSec, timeline.duration, timeline.clips, updateClip, addLog, getSnapPoints, trySnap]);
 
   // --- Clip resize ---
   const handleResizeStart = (e: React.MouseEvent, clip: TimelineClip, edge: ResizeEdge) => {
     e.preventDefault();
     e.stopPropagation();
-    setResizeState({
-      clipId: clip.id,
-      edge,
-      originalStartTime: clip.startTime,
-      originalDuration: clip.duration,
-    });
+    setResizeState({ clipId: clip.id, edge, originalStartTime: clip.startTime, originalDuration: clip.duration });
     setResizePreview({ startTime: clip.startTime, duration: clip.duration });
   };
 
   useEffect(() => {
     if (!resizeState) return;
-
     const clip = timeline.clips.find(c => c.id === resizeState.clipId);
     const track = clip?.track || 'video';
     const snapPoints = getSnapPoints(resizeState.clipId, track);
-
     const handleMouseMove = (e: MouseEvent) => {
       const rect = containerRef.current?.getBoundingClientRect();
       if (!rect) return;
       const scrollLeft = containerRef.current?.scrollLeft || 0;
-      const mouseX = e.clientX - rect.left + scrollLeft - 80;
-      const mouseTime = mouseX / pxPerSec;
-
+      const mouseTime = (e.clientX - rect.left + scrollLeft - 80) / pxPerSec;
       const MIN_DURATION = 0.5;
-
       if (resizeState.edge === 'left') {
         const maxNewStart = resizeState.originalStartTime + resizeState.originalDuration - MIN_DURATION;
         const rawStart = Math.max(0, Math.min(mouseTime, maxNewStart));
-        const { snapped: snappedStart, didSnap } = trySnap(rawStart, snapPoints);
-        const finalStart = didSnap ? snappedStart : Math.round(rawStart * 4) / 4;
+        const { snapped, didSnap } = trySnap(rawStart, snapPoints);
+        const finalStart = didSnap ? snapped : Math.round(rawStart * 4) / 4;
         const newDuration = resizeState.originalDuration + (resizeState.originalStartTime - finalStart);
         setSnapLine(didSnap ? finalStart : null);
         setResizePreview({ startTime: finalStart, duration: Math.max(MIN_DURATION, newDuration) });
       } else {
         const rawEnd = mouseTime;
-        const { snapped: snappedEnd, didSnap } = trySnap(rawEnd, snapPoints);
-        const finalEnd = didSnap ? snappedEnd : Math.round(rawEnd * 4) / 4;
+        const { snapped, didSnap } = trySnap(rawEnd, snapPoints);
+        const finalEnd = didSnap ? snapped : Math.round(rawEnd * 4) / 4;
         const newDuration = finalEnd - resizeState.originalStartTime;
         setSnapLine(didSnap ? finalEnd : null);
         setResizePreview({ startTime: resizeState.originalStartTime, duration: Math.max(MIN_DURATION, newDuration) });
       }
     };
-
     const handleMouseUp = () => {
       if (resizePreview && resizeState) {
-        updateClip(resizeState.clipId, {
-          startTime: resizePreview.startTime,
-          duration: resizePreview.duration,
-        });
-        addLog('info', `Resized clip: ${resizePreview.duration.toFixed(2)}s starting at ${resizePreview.startTime.toFixed(2)}s`);
+        updateClip(resizeState.clipId, { startTime: resizePreview.startTime, duration: resizePreview.duration });
+        addLog('info', `Resized clip: ${resizePreview.duration.toFixed(2)}s at ${resizePreview.startTime.toFixed(2)}s`);
       }
       setResizeState(null);
       setResizePreview(null);
       setSnapLine(null);
     };
-
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-    };
+    return () => { window.removeEventListener('mousemove', handleMouseMove); window.removeEventListener('mouseup', handleMouseUp); };
   }, [resizeState, resizePreview, pxPerSec, timeline.clips, updateClip, addLog, getSnapPoints, trySnap]);
+
+  // --- File drag & drop from OS ---
+  const handleFileDragOver = (e: React.DragEvent, track: 'video' | 'audio') => {
+    e.preventDefault();
+    e.stopPropagation();
+    setFileDragOver(track);
+  };
+
+  const handleFileDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setFileDragOver(null);
+  };
+
+  const handleFileDrop = (e: React.DragEvent, track: 'video' | 'audio') => {
+    e.preventDefault();
+    e.stopPropagation();
+    setFileDragOver(null);
+
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length === 0) return;
+
+    const rect = containerRef.current?.getBoundingClientRect();
+    const scrollLeft = containerRef.current?.scrollLeft || 0;
+    let dropTime = rect ? Math.max(0, (e.clientX - rect.left + scrollLeft - 80) / pxPerSec) : 0;
+    dropTime = Math.round(dropTime * 4) / 4;
+
+    files.forEach((file, idx) => {
+      const isImage = file.type.startsWith('image/');
+      const isAudio = file.type.startsWith('audio/');
+      const isVideo = file.type.startsWith('video/');
+
+      if (!isImage && !isAudio && !isVideo) {
+        toast.error(`Unsupported file: ${file.name}`);
+        return;
+      }
+
+      const url = URL.createObjectURL(file);
+      const type: 'image' | 'audio' | 'video' = isImage ? 'image' : isAudio ? 'audio' : 'video';
+      const assetId = addAsset({ type, url, duration: 5, name: file.name });
+
+      addClip({
+        assetId,
+        track: isAudio ? 'audio' : track,
+        startTime: dropTime + idx * 5,
+        duration: 5,
+        name: file.name,
+      });
+
+      addLog('success', `Dropped "${file.name}" → ${track} track at ${dropTime.toFixed(1)}s`);
+    });
+
+    toast.success(`${files.length} file(s) added to timeline`);
+  };
 
   const handleRulerClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const rect = rulerRef.current?.getBoundingClientRect();
@@ -362,11 +407,18 @@ export function TimelineView() {
   const addSceneClips = () => {
     let currentTime = 0;
     scenes.forEach((scene) => {
-      addClip({ assetId: scene.id, track: 'video', startTime: currentTime, duration: scene.durationTargetSec });
-      addClip({ assetId: scene.id, track: 'audio', startTime: currentTime, duration: scene.durationTargetSec });
+      const videoClipId = addClip({ assetId: scene.id, track: 'video', startTime: currentTime, duration: scene.durationTargetSec });
+      const audioClipId = addClip({ assetId: scene.id, track: 'audio', startTime: currentTime, duration: scene.durationTargetSec });
       currentTime += scene.durationTargetSec;
     });
-    addLog('success', `Added ${scenes.length} scenes to timeline`);
+    // Auto-add dissolve transitions between consecutive video clips
+    const videoClips = useProjectStore.getState().timeline.clips
+      .filter((c) => c.track === 'video')
+      .sort((a, b) => a.startTime - b.startTime);
+    for (let i = 0; i < videoClips.length - 1; i++) {
+      addTransition({ type: 'dissolve', duration: 0.5, fromClipId: videoClips[i].id, toClipId: videoClips[i + 1].id });
+    }
+    addLog('success', `Added ${scenes.length} scenes with transitions to timeline`);
   };
 
   const tracks = [
@@ -375,49 +427,44 @@ export function TimelineView() {
   ];
 
   const getClipStyle = (clip: TimelineClip) => {
-    // Resize preview
     if (resizeState?.clipId === clip.id && resizePreview) {
-      return {
-        left: resizePreview.startTime * pxPerSec,
-        width: resizePreview.duration * pxPerSec,
-        opacity: 0.85,
-        zIndex: 50,
-      };
+      return { left: resizePreview.startTime * pxPerSec, width: resizePreview.duration * pxPerSec, opacity: 0.85, zIndex: 50 };
     }
-    // Drag ghost
     if (dragState?.clipId === clip.id && dragGhost) {
-      return {
-        left: dragGhost.x * pxPerSec,
-        width: clip.duration * pxPerSec,
-        opacity: 0.7,
-        zIndex: 50,
-      };
+      return { left: dragGhost.x * pxPerSec, width: clip.duration * pxPerSec, opacity: 0.7, zIndex: 50 };
     }
-    return {
-      left: clip.startTime * pxPerSec,
-      width: clip.duration * pxPerSec,
-    };
+    return { left: clip.startTime * pxPerSec, width: clip.duration * pxPerSec };
   };
 
-  const isDropTarget = (trackKey: 'video' | 'audio') => {
-    return dragState && dragGhost?.track === trackKey;
+  const isDropTarget = (trackKey: 'video' | 'audio') => dragState && dragGhost?.track === trackKey;
+
+  // Find transitions for a track to render diamonds
+  const getTransitionsForTrack = (trackKey: 'video' | 'audio') => {
+    const trackClips = timeline.clips.filter((c) => c.track === trackKey);
+    return (timeline.transitions || []).filter((t) => {
+      const from = trackClips.find((c) => c.id === t.fromClipId);
+      const to = trackClips.find((c) => c.id === t.toClipId);
+      return from && to;
+    });
   };
 
   return (
     <div className="flex h-full flex-col">
       <PreviewMonitor />
+
+      {/* Transport controls */}
       <div className="flex items-center justify-between border-b border-border bg-card px-4 py-2">
         <div className="flex items-center gap-1">
           <button
             onClick={() => useProjectStore.temporal.getState().undo()}
-            className="rounded p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed"
+            className="rounded p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-30"
             title="Undo (Ctrl+Z)"
           >
             <Undo2 className="h-4 w-4" />
           </button>
           <button
             onClick={() => useProjectStore.temporal.getState().redo()}
-            className="rounded p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed"
+            className="rounded p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-30"
             title="Redo (Ctrl+Shift+Z)"
           >
             <Redo2 className="h-4 w-4" />
@@ -457,14 +504,15 @@ export function TimelineView() {
         </div>
       </div>
 
+      {/* Keyboard hints */}
       <div className="flex items-center gap-4 border-b border-border bg-card/50 px-4 py-1">
         {[
           { key: 'Space', action: t('timeline.play') },
           { key: '←→', action: t('timeline.seek') },
-          { key: '+−', action: t('timeline.zoom') },
-          { key: '⌘Z', action: 'Undo' },
-          { key: '⌘⇧Z', action: 'Redo' },
-          { key: 'Drag edge', action: 'Resize' },
+          { key: 'T', action: 'Transition' },
+          { key: 'D', action: 'Duplicate' },
+          { key: 'Del', action: 'Delete' },
+          { key: 'Drop files', action: 'Import media' },
         ].map(({ key, action }) => (
           <span key={key} className="text-[10px] text-muted-foreground/50">
             <kbd className="rounded bg-border/50 px-1 py-0.5 font-mono text-[9px] text-muted-foreground">{key}</kbd>{' '}{action}
@@ -472,6 +520,7 @@ export function TimelineView() {
         ))}
       </div>
 
+      {/* Timeline content */}
       <div className="flex-1 overflow-auto" ref={containerRef}>
         <div style={{ width: totalWidth, minWidth: '100%' }}>
           <canvas
@@ -486,28 +535,78 @@ export function TimelineView() {
 
           {tracks.map(({ label, fullLabel, icon: Icon, trackKey, gradient, borderColor, hoverBorder }) => {
             const trackClips = timeline.clips.filter((c) => {
-              if (dragState?.clipId === c.id && dragGhost) {
-                return dragGhost.track === trackKey;
-              }
+              if (dragState?.clipId === c.id && dragGhost) return dragGhost.track === trackKey;
               return c.track === trackKey;
             });
             const dropActive = isDropTarget(trackKey);
+            const trackTransitions = getTransitionsForTrack(trackKey);
 
             return (
-              <div key={label} className={`flex border-b transition-colors ${dropActive ? 'border-primary/60 bg-primary/5' : 'border-border'}`}>
+              <div
+                key={label}
+                className={`flex border-b transition-colors ${
+                  fileDragOver === trackKey ? 'border-primary bg-primary/10' :
+                  dropActive ? 'border-primary/60 bg-primary/5' : 'border-border'
+                }`}
+                onDragOver={(e) => handleFileDragOver(e, trackKey)}
+                onDragLeave={handleFileDragLeave}
+                onDrop={(e) => handleFileDrop(e, trackKey)}
+              >
                 <div className="flex w-20 shrink-0 flex-col items-center justify-center border-r border-border bg-card py-4 gap-1">
                   <Icon className="h-3.5 w-3.5 text-muted-foreground" />
                   <span className="text-[10px] font-mono text-muted-foreground font-bold">{label}</span>
                 </div>
                 <div className="relative flex-1 bg-background/30" style={{ minHeight: 64 }}>
+                  {/* Playhead line */}
                   <div className="absolute top-0 bottom-0 w-px bg-primary/80 z-10 pointer-events-none" style={{ left: timeline.playheadPosition * pxPerSec }} />
-                  {/* Magnetic snap line */}
+
+                  {/* Snap line */}
                   {snapLine !== null && (
-                    <div className="absolute top-0 bottom-0 w-px bg-yellow-400 z-20 pointer-events-none opacity-80" style={{ left: snapLine * pxPerSec }}>
-                      <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-yellow-400" />
+                    <div className="absolute top-0 bottom-0 w-px bg-warning z-20 pointer-events-none opacity-80" style={{ left: snapLine * pxPerSec }}>
+                      <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-warning" />
                     </div>
                   )}
 
+                  {/* Transition diamonds between clips */}
+                  {trackTransitions.map((trans) => {
+                    const fromClip = timeline.clips.find((c) => c.id === trans.fromClipId);
+                    if (!fromClip) return null;
+                    const x = (fromClip.startTime + fromClip.duration) * pxPerSec;
+                    const isSelected = selectedTransitionId === trans.id;
+                    return (
+                      <div
+                        key={trans.id}
+                        className={`absolute z-30 cursor-pointer group`}
+                        style={{ left: x - 10, top: '50%', transform: 'translateY(-50%)' }}
+                        onClick={(e) => { e.stopPropagation(); setSelectedTransitionId(trans.id); }}
+                        onContextMenu={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setTransitionMenu({ x: e.clientX, y: e.clientY, fromClipId: trans.fromClipId, toClipId: trans.toClipId });
+                        }}
+                      >
+                        {/* Diamond shape */}
+                        <div className={`w-5 h-5 rotate-45 rounded-sm border-2 transition-all ${
+                          isSelected
+                            ? 'bg-warning border-warning shadow-lg shadow-warning/30'
+                            : 'bg-warning/20 border-warning/50 group-hover:bg-warning/40 group-hover:border-warning/80'
+                        }`} />
+                        {/* Transition duration area */}
+                        <div
+                          className="absolute -left-1 top-1/2 -translate-y-1/2 h-3 bg-warning/10 border-t border-b border-warning/20 pointer-events-none"
+                          style={{ width: trans.duration * pxPerSec + 2 }}
+                        />
+                        {/* Label on hover */}
+                        <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                          <span className="text-[8px] font-mono text-warning bg-card/90 backdrop-blur-sm rounded px-1 py-0.5 border border-warning/20">
+                            {TRANSITION_OPTIONS.find((o) => o.value === trans.type)?.label || trans.type} {trans.duration}s
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {/* Clips */}
                   {trackClips.map((clip, idx) => {
                     const scene = scenes.find((s) => s.id === clip.assetId);
                     const isDragged = dragState?.clipId === clip.id;
@@ -540,7 +639,9 @@ export function TimelineView() {
                         <div className="flex items-center px-3 min-w-0 flex-1">
                           <GripVertical className="h-3 w-3 text-muted-foreground/40 shrink-0 cursor-grab active:cursor-grabbing mr-1" />
                           <div className="flex items-center gap-1.5 min-w-0">
-                            <span className="text-[10px] font-mono font-bold text-foreground/70 shrink-0">S{scene?.sceneNumber || idx + 1}</span>
+                            <span className="text-[10px] font-mono font-bold text-foreground/70 shrink-0">
+                              {clip.name || (scene ? `S${scene.sceneNumber}` : `C${idx + 1}`)}
+                            </span>
                             {(style.width || 0) > 80 && (
                               <span className="text-[9px] font-mono text-muted-foreground truncate">
                                 {resizeState?.clipId === clip.id && resizePreview
@@ -569,11 +670,18 @@ export function TimelineView() {
                     );
                   })}
 
-                  {trackClips.length === 0 && !dropActive && (
-                    <div className="flex h-full items-center justify-center text-[10px] text-muted-foreground/30 font-mono">{fullLabel}</div>
+                  {/* File drag overlay */}
+                  {fileDragOver === trackKey && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-primary/5 border-2 border-dashed border-primary/40 rounded z-40 pointer-events-none">
+                      <div className="flex items-center gap-2 text-primary">
+                        <Upload className="h-4 w-4" />
+                        <span className="text-xs font-bold font-display">Drop media files here</span>
+                      </div>
+                    </div>
                   )}
-                  {dropActive && trackClips.length === 0 && (
-                    <div className="flex h-full items-center justify-center text-[10px] text-primary/50 font-mono">Drop here</div>
+
+                  {trackClips.length === 0 && !dropActive && fileDragOver !== trackKey && (
+                    <div className="flex h-full items-center justify-center text-[10px] text-muted-foreground/30 font-mono">{fullLabel}</div>
                   )}
                 </div>
               </div>
@@ -589,10 +697,10 @@ export function TimelineView() {
         </div>
       </div>
 
-      {/* Context menu */}
+      {/* Clip context menu */}
       {contextMenu && (
         <div
-          className="fixed z-50 w-44 rounded-lg border border-border bg-card/95 backdrop-blur-xl p-1 shadow-xl shadow-background/50"
+          className="fixed z-50 w-52 rounded-lg border border-border bg-card/95 backdrop-blur-xl p-1 shadow-xl shadow-background/50"
           style={{ left: contextMenu.x, top: contextMenu.y }}
           onClick={(e) => e.stopPropagation()}
         >
@@ -608,6 +716,36 @@ export function TimelineView() {
             Duplicate
             <kbd className="ml-auto text-[9px] font-mono text-muted-foreground/50 bg-border/50 px-1 rounded">D</kbd>
           </button>
+
+          {/* Add transition submenu */}
+          <div className="relative group/trans">
+            <button
+              className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-xs text-foreground hover:bg-secondary transition-colors"
+              onClick={() => {
+                const clip = timeline.clips.find((c) => c.id === contextMenu.clipId);
+                if (clip) {
+                  const nextClip = timeline.clips
+                    .filter((c) => c.track === clip.track && c.startTime > clip.startTime)
+                    .sort((a, b) => a.startTime - b.startTime)[0];
+                  if (nextClip) {
+                    addTransition({ type: 'dissolve', duration: 0.5, fromClipId: clip.id, toClipId: nextClip.id });
+                    addLog('info', 'Added dissolve transition');
+                    toast.success('Transition added');
+                  } else {
+                    toast.error('No next clip to transition to');
+                  }
+                }
+                setContextMenu(null);
+              }}
+            >
+              <Shuffle className="h-3.5 w-3.5 text-muted-foreground" />
+              Add Transition →
+              <kbd className="ml-auto text-[9px] font-mono text-muted-foreground/50 bg-border/50 px-1 rounded">T</kbd>
+            </button>
+          </div>
+
+          <div className="h-px bg-border my-0.5" />
+
           <button
             className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-xs text-destructive hover:bg-destructive/10 transition-colors"
             onClick={() => {
@@ -621,6 +759,74 @@ export function TimelineView() {
             Delete
             <kbd className="ml-auto text-[9px] font-mono text-muted-foreground/50 bg-border/50 px-1 rounded">Del</kbd>
           </button>
+        </div>
+      )}
+
+      {/* Transition context menu */}
+      {transitionMenu && (
+        <div
+          className="fixed z-50 w-48 rounded-lg border border-border bg-card/95 backdrop-blur-xl p-1 shadow-xl shadow-background/50"
+          style={{ left: transitionMenu.x, top: transitionMenu.y }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <p className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground/50 uppercase tracking-wider">Transition Type</p>
+          {TRANSITION_OPTIONS.map((opt) => {
+            const existing = (timeline.transitions || []).find(
+              (t) => t.fromClipId === transitionMenu.fromClipId && t.toClipId === transitionMenu.toClipId
+            );
+            const isActive = existing?.type === opt.value;
+            return (
+              <button
+                key={opt.value}
+                className={`flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-xs transition-colors ${
+                  isActive ? 'bg-primary/15 text-primary' : 'text-foreground hover:bg-secondary'
+                }`}
+                onClick={() => {
+                  if (existing) {
+                    if (opt.value === 'none') {
+                      removeTransition(existing.id);
+                    } else {
+                      updateTransition(existing.id, { type: opt.value });
+                    }
+                  } else if (opt.value !== 'none') {
+                    addTransition({ type: opt.value, duration: 0.5, fromClipId: transitionMenu.fromClipId, toClipId: transitionMenu.toClipId });
+                  }
+                  setTransitionMenu(null);
+                  addLog('info', `Transition: ${opt.label}`);
+                }}
+              >
+                <span className="w-4 text-center">{opt.icon}</span>
+                {opt.label}
+                {isActive && <span className="ml-auto text-[9px] text-primary">●</span>}
+              </button>
+            );
+          })}
+
+          {/* Duration control */}
+          {(() => {
+            const existing = (timeline.transitions || []).find(
+              (t) => t.fromClipId === transitionMenu.fromClipId && t.toClipId === transitionMenu.toClipId
+            );
+            if (!existing || existing.type === 'none') return null;
+            return (
+              <div className="px-3 py-2 border-t border-border/50 mt-1">
+                <label className="flex items-center justify-between mb-1">
+                  <span className="text-[9px] text-muted-foreground/60 uppercase tracking-wider">Duration</span>
+                  <span className="text-[10px] font-mono text-primary">{existing.duration}s</span>
+                </label>
+                <input
+                  type="range"
+                  min={0.25}
+                  max={3}
+                  step={0.25}
+                  value={existing.duration}
+                  onChange={(e) => updateTransition(existing.id, { duration: parseFloat(e.target.value) })}
+                  className="w-full h-1 cursor-pointer appearance-none rounded-full bg-border accent-primary"
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </div>
+            );
+          })()}
         </div>
       )}
     </div>

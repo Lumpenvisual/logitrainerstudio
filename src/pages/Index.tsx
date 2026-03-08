@@ -26,7 +26,7 @@ import { OnboardingTour } from '@/components/onboarding/OnboardingTour';
 
 const Index = () => {
   const { user, loading } = useAuth();
-  const { currentView, isChatOpen, scenes, selectedClipId } = useProjectStore();
+  const { currentView, isChatOpen, scenes, selectedClipId, selectedTransitionId } = useProjectStore();
   const { saveProject, listProjects, loadProject, deleteProject } = useProjects();
   const [showWelcome, setShowWelcome] = useState(true);
   const [imageLabSceneId, setImageLabSceneId] = useState<string | null>(null);
@@ -150,7 +150,7 @@ const Index = () => {
               {isChatOpen && <ChatPanel />}
             </AnimatePresence>
             <AnimatePresence>
-              {selectedClipId && currentView === 'timeline' && <ClipPropertiesPanel />}
+              {(selectedClipId || selectedTransitionId) && currentView === 'timeline' && <ClipPropertiesPanel />}
             </AnimatePresence>
           </div>
         </div>

@@ -7,6 +7,7 @@ export type ViewMode = 'architect' | 'studio' | 'timeline' | 'dashboard';
 export type AssetType = 'image' | 'audio' | 'video';
 export type AssetStatus = 'idle' | 'generating' | 'ready' | 'error';
 export type LogLevel = 'info' | 'success' | 'error' | 'warning';
+export type TransitionType = 'none' | 'fade' | 'dissolve' | 'wipe-left' | 'wipe-right' | 'wipe-up' | 'wipe-down' | 'zoom-in' | 'zoom-out' | 'slide-left' | 'slide-right';
 
 export interface Scene {
   id: string;
@@ -27,6 +28,14 @@ export interface Asset {
   name: string;
 }
 
+export interface TimelineTransition {
+  id: string;
+  type: TransitionType;
+  duration: number; // seconds (0.25 - 3.0)
+  fromClipId: string;
+  toClipId: string;
+}
+
 export interface TimelineClip {
   id: string;
   assetId: string;
@@ -34,12 +43,13 @@ export interface TimelineClip {
   startTime: number;
   duration: number;
   name?: string;
-  opacity?: number;   // 0-100, default 100
-  volume?: number;    // 0-100, default 100
+  opacity?: number;
+  volume?: number;
 }
 
 export interface TimelineState {
   clips: TimelineClip[];
+  transitions: TimelineTransition[];
   playheadPosition: number;
   zoom: number;
   isPlaying: boolean;
@@ -80,10 +90,16 @@ interface ProjectStore {
   setPlayhead: (pos: number) => void;
   setZoom: (zoom: number) => void;
   togglePlay: () => void;
-  addClip: (clip: Omit<TimelineClip, 'id'>) => void;
+  addClip: (clip: Omit<TimelineClip, 'id'>) => string;
   updateClip: (id: string, updates: Partial<Omit<TimelineClip, 'id'>>) => void;
   removeClip: (id: string) => void;
   duplicateClip: (id: string) => void;
+
+  // Transitions
+  addTransition: (transition: Omit<TimelineTransition, 'id'>) => void;
+  updateTransition: (id: string, updates: Partial<Omit<TimelineTransition, 'id'>>) => void;
+  removeTransition: (id: string) => void;
+  getTransitionBetween: (clipAId: string, clipBId: string) => TimelineTransition | undefined;
 
   logs: LogEntry[];
   addLog: (level: LogLevel, message: string) => void;
@@ -101,17 +117,18 @@ interface ProjectStore {
   isChatOpen: boolean;
   toggleChat: () => void;
 
-  // Selection
   selectedClipId: string | null;
   setSelectedClipId: (id: string | null) => void;
 
-  // Import
+  selectedTransitionId: string | null;
+  setSelectedTransitionId: (id: string | null) => void;
+
   importProject: (data: { title: string; brief: string; scenes: any[]; timeline: any; assets: any }) => void;
 }
 
 export const useProjectStore = create<ProjectStore>()(
   temporal(
-    immer((set) => ({
+    immer((set, get) => ({
       projectTitle: 'Untitled Project',
       setProjectTitle: (title) => set((s) => { s.projectTitle = title; }),
 
@@ -145,6 +162,7 @@ export const useProjectStore = create<ProjectStore>()(
 
       timeline: {
         clips: [],
+        transitions: [],
         playheadPosition: 0,
         zoom: 50,
         isPlaying: false,
@@ -153,13 +171,21 @@ export const useProjectStore = create<ProjectStore>()(
       setPlayhead: (pos) => set((s) => { s.timeline.playheadPosition = pos; }),
       setZoom: (zoom) => set((s) => { s.timeline.zoom = zoom; }),
       togglePlay: () => set((s) => { s.timeline.isPlaying = !s.timeline.isPlaying; }),
-      addClip: (clip) => set((s) => { s.timeline.clips.push({ ...clip, id: uuid() }); }),
+      addClip: (clip) => {
+        const id = uuid();
+        set((s) => { s.timeline.clips.push({ ...clip, id }); });
+        return id;
+      },
       updateClip: (id, updates) => set((s) => {
         const idx = s.timeline.clips.findIndex((c) => c.id === id);
         if (idx !== -1) Object.assign(s.timeline.clips[idx], updates);
       }),
       removeClip: (id) => set((s) => {
         s.timeline.clips = s.timeline.clips.filter((c) => c.id !== id);
+        // Also remove transitions referencing this clip
+        s.timeline.transitions = s.timeline.transitions.filter(
+          (t) => t.fromClipId !== id && t.toClipId !== id
+        );
       }),
       duplicateClip: (id) => set((s) => {
         const clip = s.timeline.clips.find((c) => c.id === id);
@@ -171,6 +197,27 @@ export const useProjectStore = create<ProjectStore>()(
           });
         }
       }),
+
+      // Transitions
+      addTransition: (transition) => set((s) => {
+        // Remove existing transition between same clips
+        s.timeline.transitions = s.timeline.transitions.filter(
+          (t) => !(t.fromClipId === transition.fromClipId && t.toClipId === transition.toClipId)
+        );
+        s.timeline.transitions.push({ ...transition, id: uuid() });
+      }),
+      updateTransition: (id, updates) => set((s) => {
+        const idx = s.timeline.transitions.findIndex((t) => t.id === id);
+        if (idx !== -1) Object.assign(s.timeline.transitions[idx], updates);
+      }),
+      removeTransition: (id) => set((s) => {
+        s.timeline.transitions = s.timeline.transitions.filter((t) => t.id !== id);
+      }),
+      getTransitionBetween: (clipAId, clipBId) => {
+        return get().timeline.transitions.find(
+          (t) => t.fromClipId === clipAId && t.toClipId === clipBId
+        );
+      },
 
       logs: [] as LogEntry[],
       addLog: (level, message) =>
@@ -196,20 +243,23 @@ export const useProjectStore = create<ProjectStore>()(
       toggleChat: () => set((s) => { s.isChatOpen = !s.isChatOpen; }),
 
       selectedClipId: null as string | null,
-      setSelectedClipId: (id) => set((s) => { s.selectedClipId = id; }),
+      setSelectedClipId: (id) => set((s) => { s.selectedClipId = id; s.selectedTransitionId = null; }),
+
+      selectedTransitionId: null as string | null,
+      setSelectedTransitionId: (id) => set((s) => { s.selectedTransitionId = id; s.selectedClipId = null; }),
 
       importProject: (data) => set((s) => {
         s.projectTitle = data.title || 'Imported Project';
         s.brief = data.brief || '';
         s.scenes = data.scenes || [];
-        s.timeline = data.timeline || { clips: [], playheadPosition: 0, zoom: 50, isPlaying: false, duration: 60 };
+        s.timeline = data.timeline || { clips: [], transitions: [], playheadPosition: 0, zoom: 50, isPlaying: false, duration: 60 };
+        if (!s.timeline.transitions) s.timeline.transitions = [];
         s.assets = data.assets || {};
       }),
     })),
     {
       limit: 50,
       partialize: (state) => {
-        // Only track undoable state, not transient UI state
         const { scenes, timeline, assets, projectTitle, brief } = state;
         return { scenes, timeline, assets, projectTitle, brief };
       },
