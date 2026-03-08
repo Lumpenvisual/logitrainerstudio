@@ -100,6 +100,13 @@ interface ProjectStore {
 
   isChatOpen: boolean;
   toggleChat: () => void;
+
+  // Selection
+  selectedClipId: string | null;
+  setSelectedClipId: (id: string | null) => void;
+
+  // Import
+  importProject: (data: { title: string; brief: string; scenes: any[]; timeline: any; assets: any }) => void;
 }
 
 export const useProjectStore = create<ProjectStore>()(
