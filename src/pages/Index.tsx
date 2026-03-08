@@ -1,6 +1,7 @@
 import { useProjectStore } from '@/store/useProjectStore';
 import { useAuth } from '@/hooks/useAuth';
 import { useProjects } from '@/hooks/useProjects';
+import { useApproval } from '@/hooks/useApproval';
 import { AppSidebar } from '@/components/layout/AppSidebar';
 import { TopBar } from '@/components/layout/TopBar';
 import { ArchitectView } from '@/components/views/ArchitectView';
@@ -15,14 +16,14 @@ import { ImageLab } from '@/components/views/ImageLab';
 import { APIManagementPanel } from '@/components/panels/APIManagementPanel';
 import { AlertsPanel } from '@/components/panels/AlertsPanel';
 import { ClipPropertiesPanel } from '@/components/panels/ClipPropertiesPanel';
+import { AdminApprovalPanel } from '@/components/panels/AdminApprovalPanel';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useAlertEngine } from '@/hooks/useAlertEngine';
 import { requestNotificationPermission } from '@/lib/notifications';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useUndoRedo } from '@/hooks/useUndoRedo';
 import { Navigate } from 'react-router-dom';
-import { Loader2 } from 'lucide-react';
-import { OnboardingTour } from '@/components/onboarding/OnboardingTour';
+import { Loader2, Shield, Clock } from 'lucide-react';
 
 const Index = () => {
   const { user, loading } = useAuth();
