@@ -7,6 +7,7 @@ import { Locale } from '@/i18n/translations';
 import { Zap, ChevronRight, Settings2, Activity, LogOut, Save, UserCircle, Check, Cloud, Loader2, Sun, Moon, Download, Upload } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useCallback } from 'react';
+import { toast } from 'sonner';
 
 const localeLabels: Record<Locale, string> = { en: 'EN', fr: 'FR', es: 'ES' };
 const localeOrder: Locale[] = ['en', 'fr', 'es'];
