@@ -1,14 +1,23 @@
-import { useProjectStore } from '@/store/useProjectStore';
+import { useProjectStore, TimelineClip } from '@/store/useProjectStore';
 import { useI18n } from '@/i18n/useI18n';
-import { Play, Pause, SkipBack, SkipForward, ZoomIn, ZoomOut, Volume2, Film, Plus } from 'lucide-react';
+import { Play, Pause, SkipBack, SkipForward, ZoomIn, ZoomOut, Volume2, Film, Plus, GripVertical } from 'lucide-react';
 import { useRef, useEffect, useCallback, useState } from 'react';
 
+interface DragState {
+  clipId: string;
+  offsetX: number;
+  originalTrack: 'video' | 'audio';
+  originalStartTime: number;
+}
+
 export function TimelineView() {
-  const { timeline, setPlayhead, setZoom, togglePlay, scenes, addClip, addLog } = useProjectStore();
+  const { timeline, setPlayhead, setZoom, togglePlay, scenes, addClip, addLog, updateClip } = useProjectStore();
   const { t } = useI18n();
   const rulerRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [isDragging, setIsDragging] = useState(false);
+  const [isRulerDragging, setIsRulerDragging] = useState(false);
+  const [dragState, setDragState] = useState<DragState | null>(null);
+  const [dragGhost, setDragGhost] = useState<{ x: number; y: number; track: 'video' | 'audio' } | null>(null);
 
   const pxPerSec = timeline.zoom;
   const totalWidth = Math.max(timeline.duration * pxPerSec, 800);
@@ -19,7 +28,6 @@ export function TimelineView() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Read CSS variables for theme-aware colors
     const root = document.documentElement;
     const getColor = (varName: string) => {
       const val = getComputedStyle(root).getPropertyValue(varName).trim();
@@ -111,6 +119,64 @@ export function TimelineView() {
     return () => window.removeEventListener('keydown', handleKey);
   }, [togglePlay, setPlayhead, setZoom, timeline.playheadPosition, timeline.duration, timeline.zoom]);
 
+  // Drag and drop handlers
+  const handleClipDragStart = (e: React.MouseEvent, clip: TimelineClip) => {
+    e.preventDefault();
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const scrollLeft = containerRef.current?.scrollLeft || 0;
+    const offsetX = e.clientX - rect.left + scrollLeft - clip.startTime * pxPerSec - 80; // 80 = track label width
+
+    setDragState({
+      clipId: clip.id,
+      offsetX,
+      originalTrack: clip.track,
+      originalStartTime: clip.startTime,
+    });
+  };
+
+  useEffect(() => {
+    if (!dragState) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const rect = containerRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const scrollLeft = containerRef.current?.scrollLeft || 0;
+      const x = e.clientX - rect.left + scrollLeft - 80;
+      const y = e.clientY - rect.top;
+
+      // Determine which track based on y position (ruler=36, shortcut bar~28, each track=64)
+      const trackAreaY = y - 36 - 28; // offset for ruler + shortcut bar
+      let track: 'video' | 'audio' = dragState.originalTrack;
+      if (trackAreaY < 64) track = 'video';
+      else if (trackAreaY < 128) track = 'audio';
+
+      const newStartTime = Math.max(0, Math.min((x - dragState.offsetX) / pxPerSec, timeline.duration - 0.5));
+      setDragGhost({ x: newStartTime, y: e.clientY, track });
+    };
+
+    const handleMouseUp = () => {
+      if (dragGhost && dragState) {
+        // Snap to 0.25s grid
+        const snapped = Math.round(dragGhost.x * 4) / 4;
+        updateClip(dragState.clipId, {
+          startTime: Math.max(0, snapped),
+          track: dragGhost.track,
+        });
+        addLog('info', `Moved clip to ${dragGhost.track.toUpperCase()} track at ${snapped.toFixed(2)}s`);
+      }
+      setDragState(null);
+      setDragGhost(null);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [dragState, dragGhost, pxPerSec, timeline.duration, updateClip, addLog]);
+
   const handleRulerClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const rect = rulerRef.current?.getBoundingClientRect();
     if (!rect) return;
@@ -119,7 +185,7 @@ export function TimelineView() {
   };
 
   const handleRulerDrag = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isDragging) return;
+    if (!isRulerDragging) return;
     handleRulerClick(e);
   };
 
@@ -141,9 +207,29 @@ export function TimelineView() {
   };
 
   const tracks = [
-    { label: 'V1', fullLabel: t('timeline.video.empty'), icon: Film, trackKey: 'video' as const, gradient: 'from-primary/30 to-primary/10', borderColor: 'border-primary/40' },
-    { label: 'A1', fullLabel: t('timeline.audio.empty'), icon: Volume2, trackKey: 'audio' as const, gradient: 'from-success/30 to-success/10', borderColor: 'border-success/40' },
+    { label: 'V1', fullLabel: t('timeline.video.empty'), icon: Film, trackKey: 'video' as const, gradient: 'from-primary/30 to-primary/10', borderColor: 'border-primary/40', hoverBorder: 'border-primary/70' },
+    { label: 'A1', fullLabel: t('timeline.audio.empty'), icon: Volume2, trackKey: 'audio' as const, gradient: 'from-success/30 to-success/10', borderColor: 'border-success/40', hoverBorder: 'border-success/70' },
   ];
+
+  const getClipStyle = (clip: TimelineClip) => {
+    // If this clip is being dragged, show ghost position
+    if (dragState?.clipId === clip.id && dragGhost) {
+      return {
+        left: dragGhost.x * pxPerSec,
+        width: clip.duration * pxPerSec,
+        opacity: 0.7,
+        zIndex: 50,
+      };
+    }
+    return {
+      left: clip.startTime * pxPerSec,
+      width: clip.duration * pxPerSec,
+    };
+  };
+
+  const isDropTarget = (trackKey: 'video' | 'audio') => {
+    return dragState && dragGhost?.track === trackKey;
+  };
 
   return (
     <div className="flex h-full flex-col">
@@ -189,6 +275,7 @@ export function TimelineView() {
           { key: '←→', action: t('timeline.seek') },
           { key: '+−', action: t('timeline.zoom') },
           { key: 'Home', action: t('timeline.start') },
+          { key: 'Drag', action: 'Move clips' },
         ].map(({ key, action }) => (
           <span key={key} className="text-[10px] text-muted-foreground/50">
             <kbd className="rounded bg-border/50 px-1 py-0.5 font-mono text-[9px] text-muted-foreground">{key}</kbd>{' '}{action}
@@ -201,17 +288,25 @@ export function TimelineView() {
           <canvas
             ref={rulerRef}
             onClick={handleRulerClick}
-            onMouseDown={() => setIsDragging(true)}
+            onMouseDown={() => setIsRulerDragging(true)}
             onMouseMove={handleRulerDrag}
-            onMouseUp={() => setIsDragging(false)}
-            onMouseLeave={() => setIsDragging(false)}
+            onMouseUp={() => setIsRulerDragging(false)}
+            onMouseLeave={() => setIsRulerDragging(false)}
             className="cursor-pointer border-b border-border"
           />
 
-          {tracks.map(({ label, fullLabel, icon: Icon, trackKey, gradient, borderColor }) => {
-            const trackClips = timeline.clips.filter((c) => c.track === trackKey);
+          {tracks.map(({ label, fullLabel, icon: Icon, trackKey, gradient, borderColor, hoverBorder }) => {
+            const trackClips = timeline.clips.filter((c) => {
+              // Show clip in its ghost track when dragging
+              if (dragState?.clipId === c.id && dragGhost) {
+                return dragGhost.track === trackKey;
+              }
+              return c.track === trackKey;
+            });
+            const dropActive = isDropTarget(trackKey);
+
             return (
-              <div key={label} className="flex border-b border-border">
+              <div key={label} className={`flex border-b transition-colors ${dropActive ? 'border-primary/60 bg-primary/5' : 'border-border'}`}>
                 <div className="flex w-20 shrink-0 flex-col items-center justify-center border-r border-border bg-card py-4 gap-1">
                   <Icon className="h-3.5 w-3.5 text-muted-foreground" />
                   <span className="text-[10px] font-mono text-muted-foreground font-bold">{label}</span>
@@ -221,12 +316,17 @@ export function TimelineView() {
 
                   {trackClips.map((clip, idx) => {
                     const scene = scenes.find((s) => s.id === clip.assetId);
+                    const isDragged = dragState?.clipId === clip.id;
+                    const style = getClipStyle(clip);
+
                     return (
                       <div
                         key={clip.id}
-                        className={`absolute top-1.5 bottom-1.5 rounded border ${borderColor} bg-gradient-to-r ${gradient} flex items-center px-2 cursor-grab active:cursor-grabbing transition-shadow hover:shadow-lg hover:shadow-primary/10`}
-                        style={{ left: clip.startTime * pxPerSec, width: clip.duration * pxPerSec }}
+                        className={`absolute top-1.5 bottom-1.5 rounded border ${isDragged ? hoverBorder : borderColor} bg-gradient-to-r ${gradient} flex items-center px-2 select-none transition-shadow ${isDragged ? 'shadow-lg shadow-primary/20 ring-1 ring-primary/30' : 'hover:shadow-lg hover:shadow-primary/10'}`}
+                        style={style}
+                        onMouseDown={(e) => handleClipDragStart(e, clip)}
                       >
+                        <GripVertical className="h-3 w-3 text-muted-foreground/40 shrink-0 cursor-grab active:cursor-grabbing mr-1" />
                         <div className="flex items-center gap-1.5 min-w-0">
                           <span className="text-[10px] font-mono font-bold text-foreground/70 shrink-0">S{scene?.sceneNumber || idx + 1}</span>
                           {clip.duration * pxPerSec > 80 && (
@@ -244,8 +344,11 @@ export function TimelineView() {
                     );
                   })}
 
-                  {trackClips.length === 0 && (
+                  {trackClips.length === 0 && !dropActive && (
                     <div className="flex h-full items-center justify-center text-[10px] text-muted-foreground/30 font-mono">{fullLabel}</div>
+                  )}
+                  {dropActive && trackClips.length === 0 && (
+                    <div className="flex h-full items-center justify-center text-[10px] text-primary/50 font-mono">Drop here</div>
                   )}
                 </div>
               </div>

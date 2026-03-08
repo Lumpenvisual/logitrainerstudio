@@ -188,10 +188,20 @@ export const useAlertStore = create<AlertStore>()(
         .single();
 
       if (data) {
+        const created = data as any as SmartAlert;
         set((s) => {
-          s.alerts.unshift(data as any);
+          s.alerts.unshift(created);
           s.unreadCount++;
         });
+
+        // Browser push notification for warning/critical alerts
+        if (created.severity === 'critical' || created.severity === 'warning') {
+          sendBrowserNotification(created.title, {
+            body: created.message,
+            tag: `alert-${created.id}`,
+            silent: created.severity !== 'critical',
+          });
+        }
       }
     },
 
