@@ -23,6 +23,7 @@ export function TopBar({ onOpenAPIPanel, onSave }: { onOpenAPIPanel: () => void;
     architect: t('nav.architect'),
     studio: t('nav.studio'),
     timeline: t('nav.timeline'),
+    dashboard: 'Dashboard',
   };
 
   const totalAssets = scenes.length * 3;
