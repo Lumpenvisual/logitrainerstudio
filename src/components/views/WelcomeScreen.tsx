@@ -1,4 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
+import { Link } from 'react-router-dom';
 import { Activity, Sparkles, ArrowRight, Zap, Film, Clock, Cpu } from 'lucide-react';
 import { useState } from 'react';
 import { useProjectStore } from '@/store/useProjectStore';
