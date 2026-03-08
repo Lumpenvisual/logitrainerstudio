@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 const localeLabels: Record<Locale, string> = { en: 'EN', fr: 'FR', es: 'ES' };
 const localeOrder: Locale[] = ['en', 'fr', 'es'];
 
-export function TopBar({ onOpenAPIPanel, onSave }: { onOpenAPIPanel: () => void; onSave?: () => void }) {
+export function TopBar({ onOpenAPIPanel, onSave, onOpenAdminPanel }: { onOpenAPIPanel: () => void; onSave?: () => void; onOpenAdminPanel?: () => void }) {
   const { projectTitle, currentView, scenes } = useProjectStore();
   const { totalCalls, avgLatency } = useAPIStore();
   const { t, locale, setLocale } = useI18n();
