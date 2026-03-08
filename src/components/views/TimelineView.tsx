@@ -2,6 +2,7 @@ import { useProjectStore, TimelineClip } from '@/store/useProjectStore';
 import { useI18n } from '@/i18n/useI18n';
 import { Play, Pause, SkipBack, SkipForward, ZoomIn, ZoomOut, Volume2, Film, Plus, GripVertical, Undo2, Redo2, Copy, Trash2 } from 'lucide-react';
 import { useRef, useEffect, useCallback, useState } from 'react';
+import { PreviewMonitor } from './PreviewMonitor';
 
 type ResizeEdge = 'left' | 'right';
 
