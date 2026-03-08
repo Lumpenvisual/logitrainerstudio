@@ -22,6 +22,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useUndoRedo } from '@/hooks/useUndoRedo';
 import { Navigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
+import { OnboardingTour } from '@/components/onboarding/OnboardingTour';
 
 const Index = () => {
   const { user, loading } = useAuth();
