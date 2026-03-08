@@ -2,6 +2,7 @@ import { useProjectStore, TimelineClip } from '@/store/useProjectStore';
 import { useI18n } from '@/i18n/useI18n';
 import { Play, Pause, SkipBack, SkipForward, ZoomIn, ZoomOut, Volume2, Film, Plus, GripVertical, Undo2, Redo2, Copy, Trash2 } from 'lucide-react';
 import { useRef, useEffect, useCallback, useState } from 'react';
+import { PreviewMonitor } from './PreviewMonitor';
 
 type ResizeEdge = 'left' | 'right';
 
@@ -404,6 +405,7 @@ export function TimelineView() {
 
   return (
     <div className="flex h-full flex-col">
+      <PreviewMonitor />
       <div className="flex items-center justify-between border-b border-border bg-card px-4 py-2">
         <div className="flex items-center gap-1">
           <button
