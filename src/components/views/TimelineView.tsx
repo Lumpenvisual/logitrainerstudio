@@ -163,10 +163,36 @@ export function TimelineView() {
       if (e.code === 'ArrowRight') setPlayhead(Math.min(timeline.duration, timeline.playheadPosition + 1));
       if (e.code === 'Equal' || e.code === 'NumpadAdd') setZoom(Math.min(120, timeline.zoom + 10));
       if (e.code === 'Minus' || e.code === 'NumpadSubtract') setZoom(Math.max(20, timeline.zoom - 10));
+      // Clip delete/duplicate
+      if (selectedClipId) {
+        if (e.code === 'Delete' || e.code === 'Backspace') {
+          e.preventDefault();
+          removeClip(selectedClipId);
+          addLog('info', 'Deleted clip');
+          setSelectedClipId(null);
+        }
+        if (e.key === 'd' && !e.metaKey && !e.ctrlKey) {
+          e.preventDefault();
+          duplicateClip(selectedClipId);
+          addLog('info', 'Duplicated clip');
+        }
+      }
+      if (e.code === 'Escape') {
+        setSelectedClipId(null);
+        setContextMenu(null);
+      }
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [togglePlay, setPlayhead, setZoom, timeline.playheadPosition, timeline.duration, timeline.zoom]);
+  }, [togglePlay, setPlayhead, setZoom, timeline.playheadPosition, timeline.duration, timeline.zoom, selectedClipId, removeClip, duplicateClip, addLog]);
+
+  // Close context menu on outside click
+  useEffect(() => {
+    if (!contextMenu) return;
+    const handler = () => setContextMenu(null);
+    window.addEventListener('click', handler);
+    return () => window.removeEventListener('click', handler);
+  }, [contextMenu]);
 
   // --- Clip drag ---
   const handleClipDragStart = (e: React.MouseEvent, clip: TimelineClip) => {
