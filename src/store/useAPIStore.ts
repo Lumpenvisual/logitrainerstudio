@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
-import { ModelPreferences, DEFAULT_PREFERENCES, getModelById } from '@/services/apiRegistry';
-import { useAlertStore } from '@/store/useAlertStore';
+import { ModelPreferences, DEFAULT_PREFERENCES } from '@/services/apiRegistry';
 
 export interface APICallLog {
   id: string;
