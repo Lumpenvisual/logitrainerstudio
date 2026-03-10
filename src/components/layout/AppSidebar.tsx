@@ -1,14 +1,10 @@
-import { FileText, Clapperboard, Clock, Bot, Activity, Bell, BarChart3, Command } from 'lucide-react';
+import { FileText, Clapperboard, Clock, Bot, Activity, Bell, BarChart3 } from 'lucide-react';
 import { useProjectStore, ViewMode } from '@/store/useProjectStore';
 import { useAlertStore } from '@/store/useAlertStore';
 import { useI18n } from '@/i18n/useI18n';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 export function AppSidebar({ onToggleAlerts, isAlertsOpen }: { onToggleAlerts?: () => void; isAlertsOpen?: boolean }) {
   const { currentView, setView, toggleChat, isChatOpen, logs } = useProjectStore();
@@ -24,12 +20,16 @@ export function AppSidebar({ onToggleAlerts, isAlertsOpen }: { onToggleAlerts?: 
   ];
 
   return (
-    <div className="flex h-full w-[60px] flex-col items-center border-r border-border bg-card/50 py-3 gap-1">
-      <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-primary/15 border border-primary/20">
-        <Activity className="h-4.5 w-4.5 text-primary" />
+    <div className="flex h-full w-[56px] flex-col items-center border-r border-border/60 bg-card/30 backdrop-blur-sm py-3 gap-1">
+      {/* Logo */}
+      <div className="mb-4 flex h-8 w-8 items-center justify-center rounded-lg bg-primary/15 border border-primary/20">
+        <Activity className="h-4 w-4 text-primary" />
       </div>
 
-      <nav className="flex flex-1 flex-col gap-0.5">
+      {/* Separator */}
+      <div className="w-5 h-px bg-border/50 mb-2" />
+
+      <nav className="flex flex-1 flex-col gap-1">
         {navItems.map(({ view, icon: Icon, label, sub }) => {
           const active = currentView === view;
           return (
@@ -38,24 +38,24 @@ export function AppSidebar({ onToggleAlerts, isAlertsOpen }: { onToggleAlerts?: 
                 <button
                   onClick={() => setView(view)}
                   className={cn(
-                    'group relative flex h-10 w-10 items-center justify-center rounded-lg transition-all duration-200',
+                    'group relative flex h-9 w-9 items-center justify-center rounded-lg transition-all duration-200',
                     active
-                      ? 'bg-primary/15 text-primary'
-                      : 'text-muted-foreground/60 hover:bg-secondary/50 hover:text-foreground'
+                      ? 'bg-primary/15 text-primary shadow-sm'
+                      : 'text-muted-foreground/50 hover:bg-secondary/40 hover:text-foreground'
                   )}
                 >
-                  <Icon className="h-[18px] w-[18px]" />
+                  <Icon className="h-[17px] w-[17px]" />
                   {active && (
                     <motion.div
                       layoutId="sidebar-active"
-                      className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[2px] rounded-r bg-primary"
-                      transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+                      className="absolute left-0 top-1/2 -translate-y-1/2 h-4 w-[2px] rounded-r-full bg-primary"
+                      transition={{ type: 'spring', stiffness: 400, damping: 28 }}
                     />
                   )}
                 </button>
               </TooltipTrigger>
-              <TooltipContent side="right" className="font-display">
-                <p className="font-semibold">{label}</p>
+              <TooltipContent side="right" sideOffset={8} className="font-display bg-card border-border shadow-premium">
+                <p className="font-semibold text-xs">{label}</p>
                 <p className="text-[10px] text-muted-foreground">{sub}</p>
               </TooltipContent>
             </Tooltip>
@@ -63,53 +63,53 @@ export function AppSidebar({ onToggleAlerts, isAlertsOpen }: { onToggleAlerts?: 
         })}
       </nav>
 
-      {/* Alerts button */}
-      <Tooltip delayDuration={200}>
-        <TooltipTrigger asChild>
-          <button
-            onClick={onToggleAlerts}
-            className={cn(
-              'relative flex h-10 w-10 items-center justify-center rounded-lg transition-all duration-200',
-              isAlertsOpen
-                ? 'bg-warning/15 text-warning'
-                : 'text-muted-foreground/60 hover:bg-secondary/50 hover:text-foreground'
-            )}
-          >
-            <Bell className="h-[18px] w-[18px]" />
-            {unreadCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-destructive px-1 text-[9px] font-bold text-destructive-foreground">
-                {unreadCount > 99 ? '99+' : unreadCount}
-              </span>
-            )}
-          </button>
-        </TooltipTrigger>
-        <TooltipContent side="right" className="font-display">
-          <p className="font-semibold">Alertas</p>
-          <p className="text-[10px] text-muted-foreground">Monitoreo inteligente de APIs</p>
-        </TooltipContent>
-      </Tooltip>
+      {/* Bottom actions */}
+      <div className="flex flex-col gap-1">
+        <div className="w-5 h-px bg-border/50 mb-1" />
+        
+        <Tooltip delayDuration={200}>
+          <TooltipTrigger asChild>
+            <button
+              onClick={onToggleAlerts}
+              className={cn(
+                'relative flex h-9 w-9 items-center justify-center rounded-lg transition-all duration-200',
+                isAlertsOpen ? 'bg-warning/15 text-warning' : 'text-muted-foreground/50 hover:bg-secondary/40 hover:text-foreground'
+              )}
+            >
+              <Bell className="h-[17px] w-[17px]" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 flex h-3.5 min-w-[14px] items-center justify-center rounded-full bg-destructive px-0.5 text-[8px] font-bold text-destructive-foreground ring-2 ring-card">
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+              )}
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="right" sideOffset={8} className="font-display bg-card border-border shadow-premium">
+            <p className="font-semibold text-xs">Alerts</p>
+            <p className="text-[10px] text-muted-foreground">Smart API monitoring</p>
+          </TooltipContent>
+        </Tooltip>
 
-      <Tooltip delayDuration={200}>
-        <TooltipTrigger asChild>
-          <button
-            onClick={toggleChat}
-            className={cn(
-              'relative flex h-10 w-10 items-center justify-center rounded-lg transition-all duration-200',
-              isChatOpen
-                ? 'bg-primary/15 text-primary'
-                : 'text-muted-foreground/60 hover:bg-secondary/50 hover:text-foreground'
-            )}
-          >
-            <Bot className="h-[18px] w-[18px]" />
-            {recentErrors > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-destructive animate-pulse-glow" />
-            )}
-          </button>
-        </TooltipTrigger>
-        <TooltipContent side="right" className="font-display">
-          <p className="font-semibold">{t('nav.assistant')}</p>
-        </TooltipContent>
-      </Tooltip>
+        <Tooltip delayDuration={200}>
+          <TooltipTrigger asChild>
+            <button
+              onClick={toggleChat}
+              className={cn(
+                'relative flex h-9 w-9 items-center justify-center rounded-lg transition-all duration-200',
+                isChatOpen ? 'bg-primary/15 text-primary' : 'text-muted-foreground/50 hover:bg-secondary/40 hover:text-foreground'
+              )}
+            >
+              <Bot className="h-[17px] w-[17px]" />
+              {recentErrors > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-destructive ring-2 ring-card animate-pulse" />
+              )}
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="right" sideOffset={8} className="font-display bg-card border-border shadow-premium">
+            <p className="font-semibold text-xs">{t('nav.assistant')}</p>
+          </TooltipContent>
+        </Tooltip>
+      </div>
     </div>
   );
 }
