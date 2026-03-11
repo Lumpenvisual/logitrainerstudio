@@ -255,7 +255,7 @@ export function ClipPropertiesPanel() {
         </div>
 
         {/* Opacity (video only) */}
-        {clip.track === 'video' && (
+        {clip.track.startsWith('V') && (
           <div>
             <label className="flex items-center justify-between mb-2">
               <span className="flex items-center gap-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
