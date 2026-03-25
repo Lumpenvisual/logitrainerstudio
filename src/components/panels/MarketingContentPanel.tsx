@@ -6,9 +6,12 @@ import { supabase } from '@/integrations/supabase/client';
 import ReactMarkdown from 'react-markdown';
 import {
   Megaphone, Mail, Globe, CalendarDays, Video, Hash,
-  Sparkles, Loader2, Copy, Check, ChevronRight, Zap
+  Sparkles, Loader2, Copy, Check, ChevronRight, Zap,
+  FileText, GitBranch, Repeat, BarChart3, ArrowRight,
+  Target, Users, DollarSign, TrendingUp, Layers
 } from 'lucide-react';
 
+// ─── Content Tools ─────────────────────────────────────────────
 const CONTENT_TOOLS = [
   { id: 'ad-copy', label: 'Ad Copy Generator', desc: 'Facebook, Google, TikTok ads', icon: Megaphone, color: 'text-orange-400', placeholder: 'Describe your product/service and target audience...' },
   { id: 'email-sequence', label: 'Email Sequences', desc: 'Nurture & conversion flows', icon: Mail, color: 'text-blue-400', placeholder: 'Describe the product and goal of the email sequence...' },
@@ -18,177 +21,396 @@ const CONTENT_TOOLS = [
   { id: 'seo-keywords', label: 'SEO & Hashtags', desc: 'Keywords, hashtags, ideas', icon: Hash, color: 'text-cyan-400', placeholder: 'Describe your niche, product, or content topic...' },
 ] as const;
 
+// ─── Copywriting Templates ─────────────────────────────────────
+const COPY_TEMPLATES = [
+  { id: 'aida', name: 'AIDA', full: 'Attention → Interest → Desire → Action', color: 'from-orange-500/20 to-red-500/20',
+    structure: 'A: Hook that stops the scroll\nI: Interesting fact or benefit\nD: Paint the dream outcome\nA: Clear CTA with urgency' },
+  { id: 'pas', name: 'PAS', full: 'Problem → Agitate → Solution', color: 'from-blue-500/20 to-cyan-500/20',
+    structure: 'P: State the painful problem\nA: Make it worse — what happens if ignored\nS: Your product as the perfect solution' },
+  { id: 'bab', name: 'BAB', full: 'Before → After → Bridge', color: 'from-green-500/20 to-emerald-500/20',
+    structure: 'B: Life before (the struggle)\nA: Life after (the transformation)\nB: Your product is the bridge' },
+  { id: '4ps', name: '4Ps', full: 'Promise → Picture → Proof → Push', color: 'from-purple-500/20 to-violet-500/20',
+    structure: 'Promise: Bold benefit claim\nPicture: Vivid visualization\nProof: Testimonials/data\nPush: CTA with scarcity' },
+  { id: 'storybrand', name: 'StoryBrand', full: 'Hero → Problem → Guide → Plan → CTA', color: 'from-pink-500/20 to-rose-500/20',
+    structure: 'Hero: Your customer\nProblem: Their challenge\nGuide: You (empathy + authority)\nPlan: 3 simple steps\nCTA: Clear action\nSuccess: What they achieve\nFailure: What they avoid' },
+];
+
+// ─── Funnel Stages ─────────────────────────────────────────────
+const FUNNEL_STAGES = [
+  { name: 'TOFU', label: 'Awareness', desc: 'Reels, TikToks, Blog posts', icon: Users, color: 'text-blue-400', width: 'w-full' },
+  { name: 'MOFU', label: 'Interest', desc: 'Lead magnets, Email nurture', icon: Target, color: 'text-purple-400', width: 'w-[85%]' },
+  { name: 'BOFU', label: 'Decision', desc: 'Webinars, VSLs, Demos', icon: DollarSign, color: 'text-orange-400', width: 'w-[65%]' },
+  { name: 'Sale', label: 'Action', desc: 'Checkout, Upsell', icon: TrendingUp, color: 'text-green-400', width: 'w-[45%]' },
+  { name: 'Referral', label: 'Advocate', desc: 'Referral program, Reviews', icon: Repeat, color: 'text-pink-400', width: 'w-[30%]' },
+];
+
 const PLATFORMS = ['Facebook', 'Google', 'TikTok', 'Instagram', 'LinkedIn', 'YouTube', 'Twitter/X'];
+type Tab = 'tools' | 'templates' | 'funnel' | 'stats';
 
 export function MarketingContentPanel() {
+  const [activeTab, setActiveTab] = useState<Tab>('tools');
   const [selectedTool, setSelectedTool] = useState<string | null>(null);
+  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [prompt, setPrompt] = useState('');
   const [platform, setPlatform] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [result, setResult] = useState<any>(null);
+  const [abVariants, setAbVariants] = useState<any[]>([]);
+  const [repurposed, setRepurposed] = useState<string[]>([]);
   const [copied, setCopied] = useState(false);
+  const [generationCount, setGenerationCount] = useState(0);
+  const [generationHistory, setGenerationHistory] = useState<{ type: string; time: Date }[]>([]);
+
+  const callAI = async (contentType: string, promptText: string, extra?: Record<string, any>) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-marketing-content`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+      },
+      body: JSON.stringify({ contentType, prompt: promptText, platform, model: 'google/gemini-3-flash-preview', ...extra }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Generation failed');
+    return data.content;
+  };
 
   const handleGenerate = async () => {
-    if (!selectedTool || !prompt.trim()) return;
+    if (!prompt.trim()) return;
+    const toolId = selectedTool || 'ad-copy';
     setIsGenerating(true);
     setResult(null);
+    setAbVariants([]);
+    setRepurposed([]);
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-marketing-content`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
-        },
-        body: JSON.stringify({ contentType: selectedTool, prompt: prompt.trim(), platform, model: 'google/gemini-3-flash-preview' }),
-      });
+      // Add template context if selected
+      const template = COPY_TEMPLATES.find(t => t.id === selectedTemplate);
+      const templateCtx = template ? `\n\nUse the ${template.name} copywriting framework:\n${template.structure}` : '';
+      const fullPrompt = prompt.trim() + templateCtx;
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Generation failed');
-      setResult(data.content);
-      toast.success('Content generated successfully!');
+      // Main generation
+      const mainResult = await callAI(toolId, fullPrompt);
+      setResult(mainResult);
+      setGenerationCount(c => c + 1);
+      setGenerationHistory(h => [...h, { type: toolId, time: new Date() }]);
+      toast.success('Content generated!');
+
+      // Auto-generate A/B variant
+      try {
+        const variantResult = await callAI(toolId, `Create a completely DIFFERENT variation of this content. Use different hooks, angles, and tone:\n\n${fullPrompt}`);
+        setAbVariants([mainResult, variantResult]);
+      } catch { /* A/B variant is optional */ }
+
+      // Auto-generate repurposed versions
+      try {
+        const repurposeResult = await callAI('ad-copy', `Take this content and create 3 short repurposed versions for: 1) Twitter/X post (280 chars), 2) Instagram caption, 3) LinkedIn post. Return as JSON: {"twitter":"...","instagram":"...","linkedin":"..."}\n\nOriginal: ${JSON.stringify(mainResult).slice(0, 1500)}`);
+        if (repurposeResult) {
+          const items = [];
+          if (repurposeResult.twitter) items.push(`🐦 Twitter: ${repurposeResult.twitter}`);
+          if (repurposeResult.instagram) items.push(`📸 Instagram: ${repurposeResult.instagram}`);
+          if (repurposeResult.linkedin) items.push(`💼 LinkedIn: ${repurposeResult.linkedin}`);
+          if (repurposeResult.raw) items.push(repurposeResult.raw);
+          if (items.length > 0) setRepurposed(items);
+        }
+      } catch { /* Repurposing is optional */ }
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to generate content');
+      toast.error(e instanceof Error ? e.message : 'Failed to generate');
     } finally {
       setIsGenerating(false);
     }
   };
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(JSON.stringify(result, null, 2));
+  const handleCopy = (text: string) => {
+    navigator.clipboard.writeText(typeof text === 'string' ? text : JSON.stringify(text, null, 2));
     setCopied(true);
-    toast.success('Copied to clipboard');
+    toast.success('Copied!');
     setTimeout(() => setCopied(false), 2000);
   };
 
   const tool = CONTENT_TOOLS.find(t => t.id === selectedTool);
 
+  const tabs: { key: Tab; label: string; icon: typeof Zap }[] = [
+    { key: 'tools', label: 'Generate', icon: Sparkles },
+    { key: 'templates', label: 'Frameworks', icon: FileText },
+    { key: 'funnel', label: 'Funnel', icon: Layers },
+    { key: 'stats', label: 'Stats', icon: BarChart3 },
+  ];
+
   return (
     <div className="flex h-full flex-col overflow-hidden">
       {/* Header */}
-      <div className="border-b border-border/40 px-6 py-4">
+      <div className="border-b border-border/40 px-5 py-3">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 border border-primary/20">
-            <Zap className="h-5 w-5 text-primary" />
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 border border-primary/20">
+            <Zap className="h-4 w-4 text-primary" />
           </div>
           <div>
-            <h2 className="text-base font-bold text-foreground font-display">Marketing Content Studio</h2>
-            <p className="text-[10px] text-muted-foreground font-mono">AI-powered content generation for digital marketing</p>
+            <h2 className="text-sm font-bold text-foreground font-display">Marketing Content Studio</h2>
+            <p className="text-[9px] text-muted-foreground font-mono">AI copywriting · A/B variants · repurposing · frameworks</p>
           </div>
         </div>
       </div>
 
+      {/* Tabs */}
+      <div className="flex border-b border-border/40">
+        {tabs.map(({ key, label, icon: Icon }) => (
+          <button
+            key={key}
+            onClick={() => { setActiveTab(key); if (key === 'tools') { setSelectedTool(null); setResult(null); } }}
+            className={cn(
+              'flex-1 flex items-center justify-center gap-1.5 px-2 py-2 text-[10px] font-medium uppercase tracking-wider transition-all',
+              activeTab === key ? 'text-primary border-b-2 border-primary bg-primary/5' : 'text-muted-foreground hover:text-foreground'
+            )}
+          >
+            <Icon className="h-3 w-3" />
+            {label}
+          </button>
+        ))}
+      </div>
+
       <div className="flex-1 overflow-auto p-4">
-        {!selectedTool ? (
-          /* Tool Selection Grid */
-          <div className="grid grid-cols-2 gap-3">
+        {/* ═══ TAB: TOOLS ═══ */}
+        {activeTab === 'tools' && !selectedTool && (
+          <div className="grid grid-cols-2 gap-2.5">
             {CONTENT_TOOLS.map((t) => (
               <motion.button
                 key={t.id}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => setSelectedTool(t.id)}
-                className="flex flex-col items-start gap-2 rounded-xl border border-border/50 bg-card/50 p-4 text-left hover:border-primary/30 hover:bg-card transition-all group"
+                className="flex flex-col items-start gap-1.5 rounded-xl border border-border/50 bg-card/50 p-3 text-left hover:border-primary/30 hover:bg-card transition-all group"
               >
-                <t.icon className={cn('h-5 w-5', t.color)} />
-                <div>
-                  <p className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">{t.label}</p>
-                  <p className="text-[10px] text-muted-foreground">{t.desc}</p>
-                </div>
-                <ChevronRight className="h-3 w-3 text-muted-foreground/30 self-end group-hover:text-primary/50 transition-colors" />
+                <t.icon className={cn('h-4 w-4', t.color)} />
+                <p className="text-xs font-semibold text-foreground group-hover:text-primary transition-colors">{t.label}</p>
+                <p className="text-[9px] text-muted-foreground leading-tight">{t.desc}</p>
               </motion.button>
             ))}
           </div>
-        ) : (
-          /* Generator View */
-          <div className="space-y-4">
-            <button onClick={() => { setSelectedTool(null); setResult(null); setPrompt(''); }} className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
-              ← Back to tools
+        )}
+
+        {activeTab === 'tools' && selectedTool && (
+          <div className="space-y-3">
+            <button onClick={() => { setSelectedTool(null); setResult(null); setAbVariants([]); setRepurposed([]); }} className="text-[10px] text-muted-foreground hover:text-foreground transition-colors">
+              ← Back
             </button>
 
-            <div className="flex items-center gap-2 mb-4">
-              {tool && <tool.icon className={cn('h-5 w-5', tool.color)} />}
-              <h3 className="text-sm font-bold text-foreground">{tool?.label}</h3>
+            <div className="flex items-center gap-2">
+              {tool && <tool.icon className={cn('h-4 w-4', tool.color)} />}
+              <h3 className="text-xs font-bold text-foreground">{tool?.label}</h3>
             </div>
 
-            {/* Platform selector for applicable tools */}
+            {/* Template selector */}
+            <div>
+              <label className="text-[9px] uppercase tracking-wider text-muted-foreground mb-1 block">Copywriting Framework (optional)</label>
+              <div className="flex flex-wrap gap-1.5">
+                {COPY_TEMPLATES.map(t => (
+                  <button
+                    key={t.id}
+                    onClick={() => setSelectedTemplate(selectedTemplate === t.id ? null : t.id)}
+                    className={cn(
+                      'rounded-lg px-2.5 py-1 text-[10px] font-bold transition-all border',
+                      selectedTemplate === t.id
+                        ? 'bg-primary/15 border-primary/30 text-primary'
+                        : 'border-border/50 text-muted-foreground hover:border-border hover:text-foreground'
+                    )}
+                  >
+                    {t.name}
+                  </button>
+                ))}
+              </div>
+              {selectedTemplate && (
+                <motion.p initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="text-[9px] text-primary/70 mt-1 font-mono">
+                  {COPY_TEMPLATES.find(t => t.id === selectedTemplate)?.full}
+                </motion.p>
+              )}
+            </div>
+
+            {/* Platform selector */}
             {['ad-copy', 'social-calendar', 'short-script'].includes(selectedTool) && (
               <div>
-                <label className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5 block">Platform</label>
-                <div className="flex flex-wrap gap-1.5">
+                <label className="text-[9px] uppercase tracking-wider text-muted-foreground mb-1 block">Platform</label>
+                <div className="flex flex-wrap gap-1">
                   {PLATFORMS.map(p => (
-                    <button
-                      key={p}
-                      onClick={() => setPlatform(platform === p ? '' : p)}
-                      className={cn(
-                        'rounded-full px-3 py-1 text-[10px] font-medium transition-all border',
+                    <button key={p} onClick={() => setPlatform(platform === p ? '' : p)}
+                      className={cn('rounded-full px-2.5 py-0.5 text-[9px] font-medium transition-all border',
                         platform === p ? 'bg-primary/15 border-primary/30 text-primary' : 'border-border/50 text-muted-foreground hover:border-border'
-                      )}
-                    >
-                      {p}
-                    </button>
+                      )}>{p}</button>
                   ))}
                 </div>
               </div>
             )}
 
-            {/* Prompt Input */}
-            <div>
-              <label className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5 block">Brief</label>
-              <textarea
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                placeholder={tool?.placeholder}
-                rows={4}
-                className="w-full rounded-lg border border-border/50 bg-background/50 px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/40 focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/10 resize-none"
-              />
-            </div>
+            {/* Prompt */}
+            <textarea
+              value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder={tool?.placeholder} rows={3}
+              className="w-full rounded-lg border border-border/50 bg-background/50 px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground/40 focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/10 resize-none"
+            />
 
-            {/* Generate Button */}
-            <motion.button
-              whileHover={{ scale: 1.01 }}
-              whileTap={{ scale: 0.99 }}
-              onClick={handleGenerate}
-              disabled={!prompt.trim() || isGenerating}
-              className="w-full flex items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground hover:brightness-110 disabled:opacity-50 transition-all glow-primary"
-            >
-              {isGenerating ? (
-                <><Loader2 className="h-4 w-4 animate-spin" /> Generating...</>
-              ) : (
-                <><Sparkles className="h-4 w-4" /> Generate Content</>
-              )}
+            {/* Generate */}
+            <motion.button whileTap={{ scale: 0.98 }} onClick={handleGenerate} disabled={!prompt.trim() || isGenerating}
+              className="w-full flex items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-xs font-semibold text-primary-foreground hover:brightness-110 disabled:opacity-50 transition-all">
+              {isGenerating ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Generating + A/B + Repurpose...</> : <><Sparkles className="h-3.5 w-3.5" /> Generate (+ A/B Variant + Repurpose)</>}
             </motion.button>
 
-            {/* Results */}
+            {/* ═══ RESULTS ═══ */}
             <AnimatePresence>
               {result && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="rounded-xl border border-border/50 bg-card/50 overflow-hidden"
-                >
-                  <div className="flex items-center justify-between border-b border-border/40 px-4 py-2.5">
-                    <span className="text-xs font-semibold text-foreground">Generated Content</span>
-                    <button onClick={handleCopy} className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors">
-                      {copied ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}
-                      {copied ? 'Copied' : 'Copy'}
-                    </button>
+                <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
+                  {/* Main Result */}
+                  <div className="rounded-xl border border-border/50 bg-card/50 overflow-hidden">
+                    <div className="flex items-center justify-between border-b border-border/40 px-3 py-2">
+                      <span className="text-[10px] font-bold text-foreground flex items-center gap-1"><span className="text-primary">A</span> Main Version</span>
+                      <button onClick={() => handleCopy(result)} className="text-[9px] text-muted-foreground hover:text-foreground flex items-center gap-1">
+                        {copied ? <Check className="h-2.5 w-2.5 text-success" /> : <Copy className="h-2.5 w-2.5" />} Copy
+                      </button>
+                    </div>
+                    <div className="p-3 max-h-[200px] overflow-auto">
+                      <pre className="text-[10px] text-foreground font-mono whitespace-pre-wrap leading-relaxed">{JSON.stringify(result, null, 2)}</pre>
+                    </div>
                   </div>
-                  <div className="p-4 max-h-[400px] overflow-auto">
-                    {result.raw ? (
-                      <div className="prose prose-sm prose-invert max-w-none text-xs">
-                        <ReactMarkdown>{result.raw}</ReactMarkdown>
+
+                  {/* A/B Variant */}
+                  {abVariants.length > 1 && (
+                    <div className="rounded-xl border border-accent/30 bg-accent/5 overflow-hidden">
+                      <div className="flex items-center justify-between border-b border-accent/20 px-3 py-2">
+                        <span className="text-[10px] font-bold text-foreground flex items-center gap-1.5">
+                          <GitBranch className="h-3 w-3 text-accent" />
+                          <span className="text-accent">B</span> A/B Variant
+                        </span>
+                        <button onClick={() => handleCopy(abVariants[1])} className="text-[9px] text-muted-foreground hover:text-foreground flex items-center gap-1">
+                          <Copy className="h-2.5 w-2.5" /> Copy
+                        </button>
                       </div>
-                    ) : (
-                      <pre className="text-xs text-foreground font-mono whitespace-pre-wrap leading-relaxed">
-                        {JSON.stringify(result, null, 2)}
-                      </pre>
-                    )}
-                  </div>
+                      <div className="p-3 max-h-[200px] overflow-auto">
+                        <pre className="text-[10px] text-foreground font-mono whitespace-pre-wrap leading-relaxed">{JSON.stringify(abVariants[1], null, 2)}</pre>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Repurposed Content */}
+                  {repurposed.length > 0 && (
+                    <div className="rounded-xl border border-success/30 bg-success/5 overflow-hidden">
+                      <div className="flex items-center gap-1.5 border-b border-success/20 px-3 py-2">
+                        <Repeat className="h-3 w-3 text-success" />
+                        <span className="text-[10px] font-bold text-foreground">Repurposed Versions</span>
+                      </div>
+                      <div className="p-3 space-y-2">
+                        {repurposed.map((item, i) => (
+                          <div key={i} className="flex items-start gap-2">
+                            <p className="text-[10px] text-foreground leading-relaxed flex-1">{item}</p>
+                            <button onClick={() => handleCopy(item)} className="shrink-0 text-muted-foreground hover:text-foreground">
+                              <Copy className="h-2.5 w-2.5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </motion.div>
               )}
             </AnimatePresence>
+          </div>
+        )}
+
+        {/* ═══ TAB: FRAMEWORKS ═══ */}
+        {activeTab === 'templates' && (
+          <div className="space-y-3">
+            <p className="text-xs text-muted-foreground mb-3">Professional copywriting frameworks used by top marketers worldwide.</p>
+            {COPY_TEMPLATES.map(t => (
+              <motion.div key={t.id} whileHover={{ scale: 1.005 }}
+                className={cn('rounded-xl border border-border/50 bg-gradient-to-br p-4 cursor-pointer hover:border-primary/30 transition-all', t.color)}
+                onClick={() => { setSelectedTemplate(t.id); setActiveTab('tools'); }}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-sm font-bold text-foreground">{t.name}</h4>
+                  <span className="text-[9px] text-muted-foreground font-mono">{t.full}</span>
+                </div>
+                <pre className="text-[10px] text-muted-foreground font-mono whitespace-pre-wrap leading-relaxed">{t.structure}</pre>
+                <div className="mt-2 flex items-center gap-1 text-[9px] text-primary">
+                  <ArrowRight className="h-2.5 w-2.5" /> Click to use this framework
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
+
+        {/* ═══ TAB: FUNNEL ═══ */}
+        {activeTab === 'funnel' && (
+          <div className="space-y-4">
+            <p className="text-xs text-muted-foreground">Marketing funnel visualization — click any stage to generate content for it.</p>
+            <div className="flex flex-col items-center gap-1 py-4">
+              {FUNNEL_STAGES.map((stage, i) => (
+                <motion.button
+                  key={stage.name}
+                  whileHover={{ scale: 1.02 }}
+                  onClick={() => {
+                    const toolMap: Record<string, string> = { TOFU: 'short-script', MOFU: 'email-sequence', BOFU: 'landing-page', Sale: 'ad-copy', Referral: 'seo-keywords' };
+                    setSelectedTool(toolMap[stage.name] || 'ad-copy');
+                    setActiveTab('tools');
+                  }}
+                  className={cn(
+                    'relative rounded-lg border border-border/50 bg-card/80 py-3 px-4 text-center transition-all hover:border-primary/30 hover:bg-card',
+                    stage.width
+                  )}
+                  style={{ opacity: 1 - i * 0.05 }}
+                >
+                  <div className="flex items-center justify-center gap-2">
+                    <stage.icon className={cn('h-4 w-4', stage.color)} />
+                    <div>
+                      <p className="text-xs font-bold text-foreground">{stage.label}</p>
+                      <p className="text-[9px] text-muted-foreground">{stage.desc}</p>
+                    </div>
+                  </div>
+                  <span className="absolute -left-5 top-1/2 -translate-y-1/2 text-[8px] font-mono text-muted-foreground/40">{stage.name}</span>
+                </motion.button>
+              ))}
+            </div>
+            <div className="rounded-xl border border-border/30 bg-card/30 p-3">
+              <p className="text-[10px] text-muted-foreground text-center">
+                <strong className="text-foreground">Pro Tip:</strong> Generate content for each funnel stage. TOFU attracts → MOFU nurtures → BOFU converts → Referral multiplies.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* ═══ TAB: STATS ═══ */}
+        {activeTab === 'stats' && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-2.5">
+              {[
+                { label: 'Total Generated', value: generationCount, icon: Sparkles, color: 'text-primary' },
+                { label: 'A/B Variants', value: Math.max(0, generationCount), icon: GitBranch, color: 'text-accent' },
+                { label: 'Repurposed', value: repurposed.length > 0 ? generationCount * 3 : 0, icon: Repeat, color: 'text-success' },
+                { label: 'Frameworks Used', value: selectedTemplate ? 1 : 0, icon: FileText, color: 'text-warning' },
+              ].map(s => (
+                <div key={s.label} className="rounded-xl border border-border/50 bg-card/50 p-3 text-center">
+                  <s.icon className={cn('h-4 w-4 mx-auto mb-1', s.color)} />
+                  <p className="text-lg font-bold font-mono text-foreground">{s.value}</p>
+                  <p className="text-[9px] text-muted-foreground">{s.label}</p>
+                </div>
+              ))}
+            </div>
+
+            {generationHistory.length > 0 ? (
+              <div className="rounded-xl border border-border/50 bg-card/50 p-3">
+                <h4 className="text-[10px] font-bold text-foreground mb-2 uppercase tracking-wider">Recent Generations</h4>
+                <div className="space-y-1.5 max-h-[200px] overflow-auto">
+                  {generationHistory.slice(-10).reverse().map((h, i) => (
+                    <div key={i} className="flex items-center justify-between text-[10px]">
+                      <span className="text-foreground font-mono">{CONTENT_TOOLS.find(t => t.id === h.type)?.label || h.type}</span>
+                      <span className="text-muted-foreground">{h.time.toLocaleTimeString()}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <BarChart3 className="h-8 w-8 text-muted-foreground/20 mx-auto mb-2" />
+                <p className="text-xs text-muted-foreground">No content generated yet. Start creating!</p>
+              </div>
+            )}
           </div>
         )}
       </div>
