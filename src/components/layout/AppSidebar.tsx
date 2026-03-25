@@ -1,4 +1,4 @@
-import { FileText, Clapperboard, Clock, Bot, Activity, Bell, BarChart3, Gift } from 'lucide-react';
+import { FileText, Clapperboard, Clock, Bot, Activity, Bell, BarChart3, Gift, Megaphone, Plug } from 'lucide-react';
 import { useProjectStore, ViewMode } from '@/store/useProjectStore';
 import { useAlertStore } from '@/store/useAlertStore';
 import { useI18n } from '@/i18n/useI18n';
