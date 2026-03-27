@@ -53,6 +53,42 @@ export type Database = {
         }
         Relationships: []
       }
+      marketing_generations: {
+        Row: {
+          content_type: string
+          created_at: string
+          framework: string | null
+          id: string
+          model: string | null
+          platform: string | null
+          prompt: string
+          result: Json | null
+          user_id: string
+        }
+        Insert: {
+          content_type: string
+          created_at?: string
+          framework?: string | null
+          id?: string
+          model?: string | null
+          platform?: string | null
+          prompt: string
+          result?: Json | null
+          user_id: string
+        }
+        Update: {
+          content_type?: string
+          created_at?: string
+          framework?: string | null
+          id?: string
+          model?: string | null
+          platform?: string | null
+          prompt?: string
+          result?: Json | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -180,6 +216,53 @@ export type Database = {
             columns: ["referral_code_id"]
             isOneToOne: false
             referencedRelation: "referral_codes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scheduled_posts: {
+        Row: {
+          content: string
+          created_at: string
+          generation_id: string | null
+          hashtags: string[] | null
+          id: string
+          platform: string
+          scheduled_at: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          generation_id?: string | null
+          hashtags?: string[] | null
+          id?: string
+          platform: string
+          scheduled_at: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          generation_id?: string | null
+          hashtags?: string[] | null
+          id?: string
+          platform?: string
+          scheduled_at?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scheduled_posts_generation_id_fkey"
+            columns: ["generation_id"]
+            isOneToOne: false
+            referencedRelation: "marketing_generations"
             referencedColumns: ["id"]
           },
         ]

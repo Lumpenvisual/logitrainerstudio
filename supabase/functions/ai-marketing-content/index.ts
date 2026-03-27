@@ -37,6 +37,21 @@ Return JSON: {"hook":"...","script":"...","duration":"...","visualCues":["..."],
 Return JSON: {"primaryKeywords":["..."],"longTailKeywords":["..."],"hashtags":["..."],"contentIdeas":["..."],"difficulty":"...","searchVolume":"..."}`,
     userPrefix: "Generate SEO keywords and hashtags for",
   },
+  "lead-magnet": {
+    system: `You are a lead generation expert. Create a compelling lead magnet concept with full outline.
+Return JSON: {"title":"...","type":"...","description":"...","targetAudience":"...","outline":["..."],"landingPageHeadline":"...","optInCTA":"...","deliveryEmail":{"subject":"...","body":"..."}}`,
+    userPrefix: "Create a lead magnet concept for",
+  },
+  "landing-template": {
+    system: `You are a world-class landing page architect. Create a complete high-converting landing page structure with all sections.
+Return JSON: {"heroSection":{"headline":"...","subheadline":"...","ctaButton":"...","socialProof":"..."},"problemSection":{"headline":"...","painPoints":["..."]},"solutionSection":{"headline":"...","benefits":[{"title":"...","description":"...","icon":"..."}]},"socialProofSection":{"testimonials":[{"name":"...","role":"...","quote":"..."}],"stats":[{"number":"...","label":"..."}]},"pricingSection":{"headline":"...","plans":[{"name":"...","price":"...","features":["..."],"cta":"..."}]},"faqSection":{"questions":[{"q":"...","a":"..."}]},"finalCTA":{"headline":"...","subtext":"...","buttonText":"..."}}`,
+    userPrefix: "Create a complete landing page structure for",
+  },
+  "webhook-trigger": {
+    system: `You are a marketing automation architect. Design webhook triggers and automation flows.
+Return JSON: {"triggers":[{"event":"...","description":"...","payload":{"fields":["..."]},"suggestedActions":["..."]}],"automationFlow":{"name":"...","steps":[{"type":"...","config":"...","delay":"..."}]}}`,
+    userPrefix: "Design automation triggers and flows for",
+  },
 };
 
 serve(async (req) => {
