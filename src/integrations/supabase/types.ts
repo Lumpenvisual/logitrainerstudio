@@ -53,6 +53,42 @@ export type Database = {
         }
         Relationships: []
       }
+      email_sequences: {
+        Row: {
+          created_at: string
+          description: string | null
+          emails: Json
+          framework: string | null
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          emails?: Json
+          framework?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          emails?: Json
+          framework?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       marketing_generations: {
         Row: {
           content_type: string
@@ -315,6 +351,54 @@ export type Database = {
         }
         Relationships: []
       }
+      template_marketplace: {
+        Row: {
+          author_id: string
+          category: string
+          content: Json
+          created_at: string
+          description: string | null
+          framework: string
+          id: string
+          is_public: boolean
+          likes_count: number
+          tags: string[]
+          title: string
+          updated_at: string
+          uses_count: number
+        }
+        Insert: {
+          author_id: string
+          category: string
+          content?: Json
+          created_at?: string
+          description?: string | null
+          framework: string
+          id?: string
+          is_public?: boolean
+          likes_count?: number
+          tags?: string[]
+          title: string
+          updated_at?: string
+          uses_count?: number
+        }
+        Update: {
+          author_id?: string
+          category?: string
+          content?: Json
+          created_at?: string
+          description?: string | null
+          framework?: string
+          id?: string
+          is_public?: boolean
+          likes_count?: number
+          tags?: string[]
+          title?: string
+          updated_at?: string
+          uses_count?: number
+        }
+        Relationships: []
+      }
       user_api_keys: {
         Row: {
           api_key_encrypted: string
@@ -392,6 +476,48 @@ export type Database = {
         Update: {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      webhook_triggers: {
+        Row: {
+          created_at: string
+          event: string
+          executions_count: number
+          id: string
+          is_active: boolean
+          last_executed_at: string | null
+          name: string
+          payload_template: Json
+          target_url: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          event: string
+          executions_count?: number
+          id?: string
+          is_active?: boolean
+          last_executed_at?: string | null
+          name: string
+          payload_template?: Json
+          target_url: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          event?: string
+          executions_count?: number
+          id?: string
+          is_active?: boolean
+          last_executed_at?: string | null
+          name?: string
+          payload_template?: Json
+          target_url?: string
+          updated_at?: string
           user_id?: string
         }
         Relationships: []
