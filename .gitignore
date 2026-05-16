@@ -11,6 +11,8 @@ node_modules
 dist
 .env.local
 .env.*.local
+.env.production.local
+.env.vercel
 .vercel
 dist-ssr
 *.local

@@ -7,6 +7,7 @@ import { I18nProvider } from "@/i18n/useI18n";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { KeyboardShortcuts } from "@/components/KeyboardShortcuts";
 import { AuthProvider } from "@/hooks/useAuth";
+import { SiteAccessGuard } from "@/components/SiteAccessGuard";
 import Index from "./pages/Index";
 import About from "./pages/About";
 import Auth from "./pages/Auth";
@@ -21,6 +22,7 @@ const App = () => (
     <QueryClientProvider client={queryClient}>
       <I18nProvider>
         <AuthProvider>
+          <SiteAccessGuard>
           <TooltipProvider>
             <Toaster />
             <Sonner />
@@ -36,6 +38,7 @@ const App = () => (
               </Routes>
             </BrowserRouter>
           </TooltipProvider>
+          </SiteAccessGuard>
         </AuthProvider>
       </I18nProvider>
     </QueryClientProvider>
