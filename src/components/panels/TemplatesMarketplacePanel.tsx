@@ -80,7 +80,7 @@ export function TemplatesMarketplacePanel() {
     fetch();
   };
 
-  const useTemplate = async (t: Template) => {
+  const applyTemplate = async (t: Template) => {
     await supabase.from("template_marketplace").update({ uses_count: t.uses_count + 1 }).eq("id", t.id);
     const text = typeof t.content === "object" ? (t.content.body || JSON.stringify(t.content, null, 2)) : String(t.content);
     await navigator.clipboard.writeText(text);
@@ -191,7 +191,7 @@ export function TemplatesMarketplacePanel() {
                   </button>
                   <span className="flex items-center gap-1"><Copy className="h-3.5 w-3.5" /> {t.uses_count}</span>
                 </div>
-                <Button size="sm" variant="outline" onClick={() => useTemplate(t)}>
+                <Button size="sm" variant="outline" onClick={() => applyTemplate(t)}>
                   <Copy className="h-3.5 w-3.5 mr-1" /> Use
                 </Button>
               </div>

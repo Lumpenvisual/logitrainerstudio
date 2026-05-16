@@ -7,9 +7,23 @@ import { motion } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import { streamChat } from '@/services/aiService';
 import { getModelById } from '@/services/apiRegistry';
+import { buildStudioSystemContext } from '@/lib/studioContext';
 
 export function ChatPanel() {
-  const { chatMessages, addChatMessage, isChatOpen, toggleChat, addLog, scenes, brief } = useProjectStore();
+  const {
+    chatMessages,
+    addChatMessage,
+    isChatOpen,
+    toggleChat,
+    addLog,
+    scenes,
+    brief,
+    projectTitle,
+    currentView,
+    timeline,
+    projectSettings,
+    isGeneratingScript,
+  } = useProjectStore();
   const { preferences, addCallLog } = useAPIStore();
   const { t } = useI18n();
   const [input, setInput] = useState('');
@@ -28,12 +42,15 @@ export function ChatPanel() {
     setIsLoading(true);
 
     const model = preferences.chatAssistant;
-    const systemContext = [
-      'You are the Neural Assistant for LogiTrainer AI Studio, a video production IDE.',
-      brief ? `Current project brief: "${brief}"` : '',
-      scenes.length > 0 ? `Project has ${scenes.length} scenes.` : '',
-      'Help with creative direction, script improvements, and production advice. Be concise and actionable.',
-    ].filter(Boolean).join(' ');
+    const systemContext = buildStudioSystemContext({
+      projectTitle,
+      currentView,
+      brief,
+      scenes,
+      timeline,
+      projectSettings,
+      isGeneratingScript,
+    });
 
     const allMessages = [
       { role: 'system', content: systemContext },
