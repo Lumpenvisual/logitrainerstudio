@@ -3,6 +3,9 @@ project_id = "bcobgfxepxmmcheuliai"
 [functions.verify-site-access]
 verify_jwt = false
 
+[functions.seed-back-office]
+verify_jwt = false
+
 [functions.ai-generate-script]
 verify_jwt = false
 

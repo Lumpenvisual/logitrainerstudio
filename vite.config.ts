@@ -6,6 +6,7 @@ import { componentTagger } from "lovable-tagger";
 
 const DEFAULT_SITE_ACCESS_SHA256 =
   "cb464f67db3b6c4fe8a14fb2ae193b1d7dcd11a939d191c3fb111d8319712454";
+const DEFAULT_BACK_OFFICE_EMAIL = "backoffice@logitrainerstudio.app";
 
 function readSiteAccessHash(mode: string): string {
   const env = loadEnv(mode, process.cwd(), "VITE_");
@@ -21,10 +22,14 @@ function readSiteAccessHash(mode: string): string {
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), "VITE_");
   const siteAccessHash = readSiteAccessHash(mode);
   return {
   define: {
     "import.meta.env.VITE_SITE_ACCESS_SHA256": JSON.stringify(siteAccessHash),
+    "import.meta.env.VITE_BACK_OFFICE_EMAIL": JSON.stringify(
+      env.VITE_BACK_OFFICE_EMAIL || DEFAULT_BACK_OFFICE_EMAIL,
+    ),
   },
   server: {
     host: "::",

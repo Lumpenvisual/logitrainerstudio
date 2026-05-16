@@ -34,7 +34,11 @@ export function useApproval() {
           .select('role')
           .eq('user_id', user.id);
 
-        setIsAdmin(roles?.some((r: any) => r.role === 'admin') ?? false);
+        const hasAdminRole = roles?.some((r: { role: string }) => r.role === 'admin') ?? false;
+        const backOfficeEmail = (import.meta.env.VITE_BACK_OFFICE_EMAIL as string | undefined)?.toLowerCase();
+        const emailMatch =
+          !!backOfficeEmail && !!user.email && user.email.toLowerCase() === backOfficeEmail;
+        setIsAdmin(hasAdminRole || emailMatch);
       } catch {
         setIsApproved(false);
         setIsAdmin(false);
