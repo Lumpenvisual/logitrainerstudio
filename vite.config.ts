@@ -4,6 +4,9 @@ import path from "path";
 import fs from "fs";
 import { componentTagger } from "lovable-tagger";
 
+const DEFAULT_SITE_ACCESS_SHA256 =
+  "cb464f67db3b6c4fe8a14fb2ae193b1d7dcd11a939d191c3fb111d8319712454";
+
 function readSiteAccessHash(mode: string): string {
   const env = loadEnv(mode, process.cwd(), "VITE_");
   if (env.VITE_SITE_ACCESS_SHA256) return env.VITE_SITE_ACCESS_SHA256;
@@ -13,7 +16,7 @@ function readSiteAccessHash(mode: string): string {
     const match = fs.readFileSync(prodFile, "utf8").match(/^VITE_SITE_ACCESS_SHA256=(.+)$/m);
     if (match?.[1]) return match[1].trim().replace(/^["']|["']$/g, "");
   }
-  return "";
+  return DEFAULT_SITE_ACCESS_SHA256;
 }
 
 // https://vitejs.dev/config/

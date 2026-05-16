@@ -4,15 +4,26 @@ import { clearSiteAccessGrant, getSiteAccessGrant, setSiteAccessGrant } from "@/
 import { matchesAccessPasswordHash } from "@/lib/siteAccessCrypto";
 
 const ACCESS_TTL_MS = 7 * 24 * 60 * 60 * 1000;
-const ENV_HASH = import.meta.env.VITE_SITE_ACCESS_SHA256 as string | undefined;
+const ENV_HASH =
+  (import.meta.env.VITE_SITE_ACCESS_SHA256 as string | undefined) ||
+  "cb464f67db3b6c4fe8a14fb2ae193b1d7dcd11a939d191c3fb111d8319712454";
 
 async function verifyViaSupabaseRpc(password: string): Promise<boolean | null> {
   const { data, error } = await supabase.rpc("verify_site_access", { attempt: password });
   if (error) {
-    if (error.code === "PGRST202" || error.message?.includes("Could not find")) return null;
+    const msg = error.message ?? "";
+    if (
+      error.code === "PGRST202" ||
+      error.code === "42883" ||
+      msg.includes("Could not find") ||
+      msg.includes("does not exist")
+    ) {
+      return null;
+    }
     throw error;
   }
-  return data === true;
+  if (typeof data === "boolean") return data;
+  return null;
 }
 
 async function verifyViaEdgeFunction(password: string): Promise<boolean | null> {
@@ -48,9 +59,10 @@ export function useSiteAccess() {
   const verifyPassword = useCallback(async (password: string) => {
     setVerifying(true);
     try {
-      let valid = await verifyViaSupabaseRpc(password);
+      let valid = await verifyViaEnvHash(password);
+      if (!valid) valid = await verifyViaSupabaseRpc(password);
       if (valid === null) valid = await verifyViaEdgeFunction(password);
-      if (valid === null) valid = await verifyViaEnvHash(password);
+      if (valid === null) valid = false;
       if (!valid) return { error: "Incorrect access password" };
 
       setSiteAccessGrant(Date.now() + ACCESS_TTL_MS);
