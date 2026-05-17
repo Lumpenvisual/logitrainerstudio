@@ -1,6 +1,5 @@
 import { test, expect } from "@playwright/test";
-
-const ACCESS_PASSWORD = process.env.STUDIO_ACCESS_PASSWORD ?? "LTS-Mayo2026-7kQ!";
+import { SITE_PASSWORD as ACCESS_PASSWORD } from "./helpers/studio";
 
 test.describe("Studio access gate", () => {
   test("blocks app without password and unlocks with correct password", async ({ page }) => {

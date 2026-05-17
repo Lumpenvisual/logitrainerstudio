@@ -9,13 +9,28 @@ lerna-debug.log*
 
 node_modules
 dist
+test-results/
+playwright-report/
+# Secrets — never commit
 .env.local
 .env.*.local
 .env.production.local
 .env.vercel
+.env.secrets
+*.secrets.env
+
+# Block accidental local env commits
+.env.local.*
+!.env.local.example
 .vercel
 dist-ssr
 *.local
+
+# Demo: regenerar con npm run demo:generate (assets versionados para deploy)
+public/demo/logitrainer/concat.txt
+
+# Supabase CLI temp (no commitear)
+supabase/.temp/
 
 # Editor directories and files
 .vscode/*

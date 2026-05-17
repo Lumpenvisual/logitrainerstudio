@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { generateMarketingContent } from '@/services/aiService';
 import { useAuth } from '@/hooks/useAuth';
 import {
   Megaphone, Mail, Globe, CalendarDays, Video, Hash,
@@ -97,18 +98,13 @@ export function MarketingContentPanel() {
   }, [user, activeTab]);
 
   const callAI = async (contentType: string, promptText: string) => {
-    const { data: { session } } = await supabase.auth.getSession();
-    const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-marketing-content`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
-      },
-      body: JSON.stringify({ contentType, prompt: promptText, platform, model: 'google/gemini-3-flash-preview' }),
+    const { data, error } = await generateMarketingContent({
+      contentType,
+      prompt: promptText,
+      platform,
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Generation failed');
-    return data.content;
+    if (error) throw new Error(error);
+    return data?.content ?? '';
   };
 
   const saveGeneration = async (contentType: string, promptText: string, resultData: any, model: string) => {

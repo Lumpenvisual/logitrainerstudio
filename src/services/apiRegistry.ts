@@ -24,10 +24,10 @@ export interface APIProvider {
   website: string;
   keyPlaceholder?: string;
   keyInstructions?: string;
-  isBuiltIn: boolean; // true = Lovable AI (no user key needed)
+  isBuiltIn: boolean; // true = platform Gemini (GEMINI_API_KEY on Supabase)
 }
 
-// ─── BUILT-IN PROVIDERS (Lovable AI Gateway) ─────────────────────────
+// ─── BUILT-IN PROVIDERS (Google Gemini via Supabase GEMINI_API_KEY) ───
 const GOOGLE_MODELS: AIModel[] = [
   {
     id: 'google/gemini-2.5-pro', name: 'Gemini 2.5 Pro', provider: 'google', providerLabel: 'Google',
@@ -59,6 +59,11 @@ const GOOGLE_MODELS: AIModel[] = [
     id: 'google/gemini-2.5-flash-image', name: 'Gemini Flash Image', provider: 'google', providerLabel: 'Google',
     capabilities: ['image-gen'], speed: 'fast', quality: 'high',
     description: 'Fast image generation from text prompts.', costTier: 'medium',
+  },
+  {
+    id: 'google/gemini-2.5-flash-preview-tts', name: 'Gemini Flash TTS', provider: 'google', providerLabel: 'Google',
+    capabilities: ['tts'], speed: 'fast', quality: 'high',
+    description: 'Neural voiceover from script text. Spanish & English.', costTier: 'medium',
   },
   {
     id: 'google/gemini-3-pro-image-preview', name: 'Gemini 3 Pro Image', provider: 'google', providerLabel: 'Google',
@@ -310,13 +315,13 @@ export interface ModelPreferences {
 }
 
 export const DEFAULT_PREFERENCES: ModelPreferences = {
-  scriptGeneration: 'google/gemini-3-flash-preview',
-  chatAssistant: 'google/gemini-3-flash-preview',
+  scriptGeneration: 'google/gemini-2.5-flash',
+  chatAssistant: 'google/gemini-2.5-flash',
   imageGeneration: 'google/gemini-2.5-flash-image',
   imageAnalysis: 'google/gemini-2.5-flash',
   imageEdit: 'google/gemini-2.5-flash-image',
   videoGeneration: 'runway/gen-4',
-  voiceSynthesis: 'elevenlabs/eleven-turbo-v2.5',
+  voiceSynthesis: 'google/gemini-2.5-flash-preview-tts',
   musicGeneration: 'suno/v4',
   speechToText: 'elevenlabs/scribe',
 };

@@ -49,22 +49,13 @@ export function useProjects() {
 
     if (error || !data) { toast.error('Failed to load project'); return; }
 
-    store.setProjectTitle(data.title);
-    store.setBrief(data.brief || '');
-    store.clearScenes();
-    if (Array.isArray(data.scenes)) {
-      // Restore scenes directly since they already have ids
-      const scenes = data.scenes as unknown as Scene[];
-      scenes.forEach(s => {
-        store.updateScene(s.id, s); // won't work if scene doesn't exist
-      });
-      // Use addScenes workaround - clear and re-add
-      useProjectStore.setState({ scenes: scenes });
-    }
-    if (data.timeline) {
-      useProjectStore.setState({ timeline: data.timeline as unknown as TimelineState });
-    }
-  }, [store]);
+    useProjectStore.setState({
+      projectTitle: data.title,
+      brief: data.brief || "",
+      scenes: Array.isArray(data.scenes) ? (data.scenes as unknown as Scene[]) : [],
+      timeline: (data.timeline as unknown as TimelineState) ?? useProjectStore.getState().timeline,
+    });
+  }, []);
 
   const listProjects = useCallback(async () => {
     if (!user) return [];

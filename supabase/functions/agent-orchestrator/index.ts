@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { geminiGenerateText } from "../_shared/gemini.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -21,10 +22,7 @@ async function runAgent(opts: {
   crewId?: string;
 }): Promise<{ executionId: string; output: string; tokens: number; latency: number; error?: string }> {
   const { supabase, userId, agent, input, context, parentExecutionId, crewId } = opts;
-  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-  if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
-
-  const model = ALLOWED_MODELS.includes(agent.model) ? agent.model : "google/gemini-3-flash-preview";
+  const model = ALLOWED_MODELS.includes(agent.model) ? agent.model : "google/gemini-2.5-flash";
 
   const { data: execution } = await supabase.from("agent_executions").insert({
     user_id: userId, agent_id: agent.id, crew_id: crewId ?? null,
@@ -59,26 +57,16 @@ You produce REAL, professional, ready-to-use, complete output. NEVER use placeho
   let errorMsg: string | undefined;
 
   try {
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: "system", content: systemMessage },
-          { role: "user", content: userMessage },
-        ],
-        temperature: Number(agent.temperature) || 0.7,
-      }),
+    const result = await geminiGenerateText({
+      model,
+      messages: [
+        { role: "system", content: systemMessage },
+        { role: "user", content: userMessage },
+      ],
+      temperature: Number(agent.temperature) || 0.7,
     });
-
-    if (!response.ok) {
-      const txt = await response.text();
-      throw new Error(`AI gateway ${response.status}: ${txt.slice(0, 200)}`);
-    }
-    const data = await response.json();
-    output = data.choices?.[0]?.message?.content || "";
-    tokens = data.usage?.total_tokens || 0;
+    output = result.text;
+    tokens = result.totalTokens;
 
     await supabase.from("agent_logs").insert({
       execution_id: execution.id, user_id: userId, agent_id: agent.id,

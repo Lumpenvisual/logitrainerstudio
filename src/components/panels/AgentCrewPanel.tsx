@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { runAgentOrchestrator } from '@/services/aiService';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -153,11 +154,8 @@ export function AgentCrewPanel() {
   const runAgent = async (agentId: string, input: string) => {
     setRunning(true);
     try {
-      const { data, error } = await supabase.functions.invoke('agent-orchestrator', {
-        body: { mode: 'agent', agentId, input },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+      const { data, error } = await runAgentOrchestrator({ mode: 'agent', agentId, input });
+      if (error) throw new Error(error);
       toast.success(`Agent finished — ${data.tokens} tokens, ${data.latency}ms`);
       fetchAll();
       const exec = (await supabase.from('agent_executions').select('*').eq('id', data.executionId).single()).data as any;
@@ -170,11 +168,8 @@ export function AgentCrewPanel() {
   const runCrew = async (crewId: string, input: string) => {
     setRunning(true);
     try {
-      const { data, error } = await supabase.functions.invoke('agent-orchestrator', {
-        body: { mode: 'crew', crewId, input },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+      const { data, error } = await runAgentOrchestrator({ mode: 'crew', crewId, input });
+      if (error) throw new Error(error);
       toast.success(`Crew finished — ${data.totalTokens} tokens across ${data.results?.length || 0} agents`);
       fetchAll();
       const exec = (await supabase.from('agent_executions').select('*').eq('id', data.executionId).single()).data as any;

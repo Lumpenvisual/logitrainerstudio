@@ -1,16 +1,5 @@
-// API service layer for all AI functions — secured with auth tokens
-import { supabase } from "@/integrations/supabase/client";
-
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-
-async function getAuthHeaders(): Promise<Record<string, string>> {
-  const { data: { session } } = await supabase.auth.getSession();
-  const token = session?.access_token;
-  return {
-    "Content-Type": "application/json",
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  };
-}
+// API service layer — all Supabase Edge Function calls
+import { callEdge, fetchEdgeStream, type EdgeCallResult } from "@/lib/edgeClient";
 
 export interface ScriptScene {
   sceneNumber: number;
@@ -20,37 +9,22 @@ export interface ScriptScene {
   voiceOverScript: string;
 }
 
-export interface APICallResult<T = unknown> {
-  data?: T;
-  error?: string;
-  model?: string;
-  latencyMs?: number;
-}
+export type APICallResult<T = unknown> = EdgeCallResult<T>;
 
-// ─── Script Generation ─────────────────────────────────────────────
 export async function generateScript(
   brief: string,
   model?: string,
-  sceneCount?: number
+  sceneCount?: number,
 ): Promise<APICallResult<{ scenes: ScriptScene[] }>> {
-  const start = performance.now();
-  try {
-    const headers = await getAuthHeaders();
-    const res = await fetch(`${SUPABASE_URL}/functions/v1/ai-generate-script`, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({ brief, model, sceneCount }),
-    });
-    const latencyMs = Math.round(performance.now() - start);
-    const data = await res.json();
-    if (!res.ok) return { error: data.error || `Error ${res.status}`, latencyMs };
-    return { data: { scenes: data.scenes }, model: data.model, latencyMs };
-  } catch (e) {
-    return { error: e instanceof Error ? e.message : "Network error", latencyMs: Math.round(performance.now() - start) };
-  }
+  const res = await callEdge<{ scenes: ScriptScene[]; model?: string }>("ai-generate-script", {
+    brief,
+    model,
+    sceneCount,
+  });
+  if (res.error) return res;
+  return { data: { scenes: res.data?.scenes ?? [] }, model: res.data?.model, latencyMs: res.latencyMs };
 }
 
-// ─── Chat (Streaming) ──────────────────────────────────────────────
 export async function streamChat(params: {
   messages: { role: string; content: string }[];
   model?: string;
@@ -59,20 +33,21 @@ export async function streamChat(params: {
   onError: (error: string) => void;
 }) {
   try {
-    const headers = await getAuthHeaders();
-    const res = await fetch(`${SUPABASE_URL}/functions/v1/ai-chat`, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({ messages: params.messages, model: params.model }),
+    const res = await fetchEdgeStream("ai-chat", {
+      messages: params.messages,
+      model: params.model,
     });
 
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      params.onError(data.error || `Error ${res.status}`);
+      params.onError((data as { error?: string }).error || `Error ${res.status}`);
       return;
     }
 
-    if (!res.body) { params.onError("No response body"); return; }
+    if (!res.body) {
+      params.onError("No response body");
+      return;
+    }
 
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
@@ -90,7 +65,10 @@ export async function streamChat(params: {
         if (line.endsWith("\r")) line = line.slice(0, -1);
         if (!line.startsWith("data: ")) continue;
         const jsonStr = line.slice(6).trim();
-        if (jsonStr === "[DONE]") { params.onDone(); return; }
+        if (jsonStr === "[DONE]") {
+          params.onDone();
+          return;
+        }
         try {
           const parsed = JSON.parse(jsonStr);
           const content = parsed.choices?.[0]?.delta?.content;
@@ -107,47 +85,113 @@ export async function streamChat(params: {
   }
 }
 
-// ─── Image Generation ───────────────────────────────────────────────
-export async function generateImage(
-  prompt: string,
-  model?: string
-): Promise<APICallResult<{ imageUrl: string; description: string }>> {
-  const start = performance.now();
-  try {
-    const headers = await getAuthHeaders();
-    const res = await fetch(`${SUPABASE_URL}/functions/v1/ai-generate-image`, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({ prompt, model }),
-    });
-    const latencyMs = Math.round(performance.now() - start);
-    const data = await res.json();
-    if (!res.ok) return { error: data.error || `Error ${res.status}`, latencyMs };
-    return { data: { imageUrl: data.imageUrl, description: data.description }, model: data.model, latencyMs };
-  } catch (e) {
-    return { error: e instanceof Error ? e.message : "Network error", latencyMs: Math.round(performance.now() - start) };
-  }
+export async function generateAudio(
+  text: string,
+  model?: string,
+  language?: string,
+): Promise<APICallResult<{ audioUrl: string; mimeType: string }>> {
+  const res = await callEdge<{ audioUrl: string; mimeType: string; model?: string }>("ai-generate-audio", {
+    text,
+    model,
+    language,
+  });
+  if (res.error) return res;
+  return {
+    data: { audioUrl: res.data?.audioUrl ?? "", mimeType: res.data?.mimeType ?? "audio/wav" },
+    model: res.data?.model,
+    latencyMs: res.latencyMs,
+  };
 }
 
-// ─── Image Analysis ─────────────────────────────────────────────────
+export async function generateImage(
+  prompt: string,
+  model?: string,
+): Promise<APICallResult<{ imageUrl: string; description: string }>> {
+  const res = await callEdge<{ imageUrl: string; description: string; model?: string }>(
+    "ai-generate-image",
+    { prompt, model },
+  );
+  if (res.error) return res;
+  return {
+    data: {
+      imageUrl: res.data?.imageUrl ?? "",
+      description: res.data?.description ?? "",
+    },
+    model: res.data?.model,
+    latencyMs: res.latencyMs,
+  };
+}
+
 export async function analyzeImage(
   imageUrl: string,
   prompt?: string,
-  model?: string
+  model?: string,
 ): Promise<APICallResult<{ analysis: string }>> {
-  const start = performance.now();
-  try {
-    const headers = await getAuthHeaders();
-    const res = await fetch(`${SUPABASE_URL}/functions/v1/ai-analyze-image`, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({ imageUrl, prompt, model }),
-    });
-    const latencyMs = Math.round(performance.now() - start);
-    const data = await res.json();
-    if (!res.ok) return { error: data.error || `Error ${res.status}`, latencyMs };
-    return { data: { analysis: data.analysis }, model: data.model, latencyMs };
-  } catch (e) {
-    return { error: e instanceof Error ? e.message : "Network error", latencyMs: Math.round(performance.now() - start) };
-  }
+  const res = await callEdge<{ analysis: string; model?: string }>("ai-analyze-image", {
+    imageUrl,
+    prompt,
+    model,
+  });
+  if (res.error) return res;
+  return {
+    data: { analysis: res.data?.analysis ?? "" },
+    model: res.data?.model,
+    latencyMs: res.latencyMs,
+  };
+}
+
+export async function generateMarketingContent(params: {
+  contentType: string;
+  prompt: string;
+  platform?: string;
+  model?: string;
+}): Promise<APICallResult<{ content: string }>> {
+  const res = await callEdge<{ content: string }>("ai-marketing-content", {
+    contentType: params.contentType,
+    prompt: params.prompt,
+    platform: params.platform,
+    model: params.model ?? "google/gemini-2.5-flash",
+  });
+  if (res.error) return res;
+  return { data: { content: res.data?.content ?? "" }, latencyMs: res.latencyMs };
+}
+
+export async function generateEmailSequence(params: {
+  topic: string;
+  framework: string;
+  audience?: string;
+}): Promise<APICallResult<{ sequence: { name?: string; description?: string; emails: unknown[] } }>> {
+  const res = await callEdge<{ sequence: { name?: string; description?: string; emails: unknown[] } }>(
+    "ai-email-sequence",
+    params,
+  );
+  if (res.error) return res;
+  return { data: { sequence: res.data?.sequence ?? { emails: [] } }, latencyMs: res.latencyMs };
+}
+
+export async function runAgentOrchestrator(params: {
+  mode: "agent" | "crew";
+  agentId?: string;
+  crewId?: string;
+  input: string;
+}): Promise<
+  APICallResult<{
+    executionId?: string;
+    tokens?: number;
+    totalTokens?: number;
+    latency?: number;
+    results?: unknown[];
+  }>
+> {
+  const body =
+    params.mode === "agent"
+      ? { mode: "agent", agentId: params.agentId, input: params.input }
+      : { mode: "crew", crewId: params.crewId, input: params.input };
+  return callEdge("agent-orchestrator", body);
+}
+
+export async function verifySiteAccess(password: string): Promise<APICallResult<{ success: boolean }>> {
+  const res = await callEdge<{ success?: boolean }>("verify-site-access", { password });
+  if (res.error) return res;
+  return { data: { success: res.data?.success === true }, latencyMs: res.latencyMs };
 }

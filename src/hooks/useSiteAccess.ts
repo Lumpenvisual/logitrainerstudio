@@ -1,12 +1,21 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { isBackOfficeEmail } from "@/lib/backOffice";
 import { clearSiteAccessGrant, getSiteAccessGrant, setSiteAccessGrant } from "@/lib/siteAccess";
 import { matchesAccessPasswordHash } from "@/lib/siteAccessCrypto";
+import { verifySiteAccess } from "@/services/aiService";
 
 const ACCESS_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const ENV_HASH =
   (import.meta.env.VITE_SITE_ACCESS_SHA256 as string | undefined) ||
   "cb464f67db3b6c4fe8a14fb2ae193b1d7dcd11a939d191c3fb111d8319712454";
+
+async function verifyViaEdge(password: string): Promise<boolean | null> {
+  const { data, error } = await verifySiteAccess(password);
+  if (error?.includes("404") || error?.includes("not found")) return null;
+  if (error) throw new Error(error);
+  return data?.success === true;
+}
 
 async function verifyViaSupabaseRpc(password: string): Promise<boolean | null> {
   const { data, error } = await supabase.rpc("verify_site_access", { attempt: password });
@@ -15,6 +24,7 @@ async function verifyViaSupabaseRpc(password: string): Promise<boolean | null> {
     if (
       error.code === "PGRST202" ||
       error.code === "42883" ||
+      error.code === "42501" ||
       msg.includes("Could not find") ||
       msg.includes("does not exist")
     ) {
@@ -24,21 +34,6 @@ async function verifyViaSupabaseRpc(password: string): Promise<boolean | null> {
   }
   if (typeof data === "boolean") return data;
   return null;
-}
-
-async function verifyViaEdgeFunction(password: string): Promise<boolean | null> {
-  const { data, error } = await supabase.functions.invoke("verify-site-access", {
-    body: { password },
-  });
-  if (error) {
-    if (error.message?.includes("404") || error.message?.includes("not found")) return null;
-    throw error;
-  }
-  if (data?.error) {
-    if (data.error.includes("Incorrect")) return false;
-    throw new Error(data.error);
-  }
-  return data?.success === true;
 }
 
 async function verifyViaEnvHash(password: string): Promise<boolean> {
@@ -52,17 +47,36 @@ export function useSiteAccess() {
   const [verifying, setVerifying] = useState(false);
 
   useEffect(() => {
-    setGranted(!!getSiteAccessGrant());
-    setChecking(false);
+    let cancelled = false;
+    const init = async () => {
+      if (getSiteAccessGrant()) {
+        if (!cancelled) {
+          setGranted(true);
+          setChecking(false);
+        }
+        return;
+      }
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!cancelled && isBackOfficeEmail(session?.user?.email)) {
+        setSiteAccessGrant(Date.now() + ACCESS_TTL_MS);
+        setGranted(true);
+      }
+      if (!cancelled) setChecking(false);
+    };
+    void init();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const verifyPassword = useCallback(async (password: string) => {
     setVerifying(true);
     try {
-      let valid = await verifyViaEnvHash(password);
-      if (!valid) valid = await verifyViaSupabaseRpc(password);
-      if (valid === null) valid = await verifyViaEdgeFunction(password);
-      if (valid === null) valid = false;
+      let valid: boolean | null = await verifyViaEdge(password);
+      if (valid === null) valid = await verifyViaSupabaseRpc(password);
+      if (valid === null) valid = await verifyViaEnvHash(password);
       if (!valid) return { error: "Incorrect access password" };
 
       setSiteAccessGrant(Date.now() + ACCESS_TTL_MS);

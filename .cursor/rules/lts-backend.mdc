@@ -1,0 +1,23 @@
+---
+description: LogiTrainer Studio backend conventions (Supabase, edge client, admin)
+globs:
+  - src/services/**
+  - src/lib/supabaseHttp.ts
+  - src/lib/edgeClient.ts
+  - src/lib/env.ts
+  - src/hooks/useApproval.ts
+  - src/hooks/useSiteAccess.ts
+  - src/hooks/useProjects.ts
+  - supabase/**
+alwaysApply: false
+---
+
+# LTS backend (auto)
+
+- Supabase project: **zghzhfheyawvbdddsybe** — not Lovable `bcobgfxepxmmcheuliai`.
+- Edge calls: `src/lib/edgeClient.ts` → `src/services/aiService.ts` / `adminService.ts`. No `functions.invoke`, no raw fetch in panels.
+- Skills: `lts-supabase-backend`, `lts-edge-client`, `lts-gemini-api`, `lts-e2e-verification`.
+- E2E: `npm run test:e2e:all` after backend changes.
+- AI provider: Google Gemini — `GEMINI_API_KEY` only in Supabase Secrets (+ optional `.env.local`, gitignored). Never in repo.
+- After migration changes: `echo y | npx supabase db push` then redeploy affected functions.
+- Back-office: `backoffice@logitrainerstudio.app`; `admin-approve-user` syncs admin role from `back_office_config`.

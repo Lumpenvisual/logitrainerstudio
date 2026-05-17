@@ -1,18 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Shield, CheckCircle, XCircle, Clock, User, Loader2, RefreshCw } from 'lucide-react';
 import { toast } from '@/components/ui/sonner';
-
-interface ApprovalUser {
-  user_id: string;
-  status: string;
-  email?: string;
-  display_name?: string;
-  avatar_url?: string;
-  created_at: string;
-  reviewed_at?: string;
-}
+import { listPendingUsers, reviewUser, type ApprovalUser } from '@/services/adminService';
 
 export function AdminApprovalPanel({ onClose }: { onClose: () => void }) {
   const [users, setUsers] = useState<ApprovalUser[]>([]);
@@ -23,11 +13,9 @@ export function AdminApprovalPanel({ onClose }: { onClose: () => void }) {
   const fetchUsers = useCallback(async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('admin-approve-user', {
-        body: { action: 'list' },
-      });
-      if (error) throw error;
-      setUsers(data.data || []);
+      const { data, error } = await listPendingUsers();
+      if (error) throw new Error(error);
+      setUsers(data?.data || []);
     } catch (err: any) {
       toast.error(err.message || 'Failed to load users');
     } finally {
@@ -40,10 +28,8 @@ export function AdminApprovalPanel({ onClose }: { onClose: () => void }) {
   const handleAction = async (userId: string, action: 'approve' | 'reject') => {
     setActing(userId);
     try {
-      const { error } = await supabase.functions.invoke('admin-approve-user', {
-        body: { action, user_id: userId },
-      });
-      if (error) throw error;
+      const { error } = await reviewUser(userId, action);
+      if (error) throw new Error(error);
       toast.success(`User ${action === 'approve' ? 'approved' : 'rejected'}`);
       fetchUsers();
     } catch (err: any) {

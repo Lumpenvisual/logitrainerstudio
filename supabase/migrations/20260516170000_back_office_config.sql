@@ -22,8 +22,8 @@ INSERT INTO public.back_office_config (admin_email, display_name, password_hash,
 VALUES (
   'backoffice@logitrainerstudio.app',
   'Back Office Admin',
-  crypt('LTS-BackOffice-2026!mX', gen_salt('bf')),
-  crypt('LTS-Bootstrap-2026-xK9', gen_salt('bf'))
+  extensions.crypt('LTS-BackOffice-2026!mX', extensions.gen_salt('bf')),
+  extensions.crypt('LTS-Bootstrap-2026-xK9', extensions.gen_salt('bf'))
 )
 ON CONFLICT (id) DO UPDATE
 SET admin_email = EXCLUDED.admin_email,
@@ -117,7 +117,7 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'Back-office config missing');
   END IF;
 
-  IF cfg.setup_token_hash <> crypt(setup_token, cfg.setup_token_hash) THEN
+  IF cfg.setup_token_hash <> extensions.crypt(setup_token, cfg.setup_token_hash) THEN
     RETURN jsonb_build_object('success', false, 'error', 'Invalid setup token');
   END IF;
 

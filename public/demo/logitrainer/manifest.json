@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "title": "LogiTrainer Studio — Demo promocional",
+  "brief": "Video promocional de 45 segundos para LogiTrainer Studio: IDE de producción audiovisual con IA. Explica que convierte un brief en guion por escenas, genera imágenes y voz con Gemini, y edita en timeline. Tono profesional, inspirador, en español. Marca: LogiTrainer Studio, agencia audiovisual automatizada.",
+  "generatedAt": "2026-05-17T02:05:40.686Z",
+  "model": "google/gemini-2.5-flash",
+  "videoFile": "logitrainer-promo.mp4",
+  "scenes": [
+    {
+      "sceneNumber": 1,
+      "sceneType": "Establishing",
+      "durationSec": 11,
+      "visualPrompt": "Montaje dinámico y rápido: un director estresado, una sala de edición abarrotada con múltiples pantallas, un equipo de cámara complejo y cables enredados. Transición suave y limpia a una pantalla de ordenador moderna y minimalista, mostrando el logo de LogiTrainer Studio y una interfaz de usuario elegante y vacía. Un suave brillo emana de la pantalla.",
+      "voiceOverScript": "La producción audiovisual ha sido tradicionalmente un laberinto de tiempo, recursos y complejidad. Hasta ahora. LogiTrainer Studio llega para redefinir cada paso de tu proceso creativo.",
+      "image": "scenes/scene-01.png",
+      "audio": "scenes/scene-01.wav",
+      "segment": "scenes/scene-01.mp4"
+    },
+    {
+      "sceneNumber": 2,
+      "sceneType": "Action",
+      "durationSec": 11,
+      "visualPrompt": "Primer plano de manos de un usuario escribiendo un breve resumen de proyecto en un campo de texto en la interfaz de LogiTrainer Studio. El campo de texto se llena rápidamente con palabras clave. Con un clic, la pantalla genera dinámicamente un guion estructurado, mostrando bloques de escenas distintas con descripciones visuales y marcadores de posición de diálogo básicos.",
+      "voiceOverScript": "Desde un simple brief, nuestra IA convierte tus ideas en un guion detallado y estructurado, escena por escena, eliminando el bloqueo creativo y acelerando tu inicio de producción.",
+      "image": "scenes/scene-02.png",
+      "audio": "scenes/scene-02.wav",
+      "segment": "scenes/scene-02.mp4"
+    },
+    {
+      "sceneNumber": 3,
+      "sceneType": "Detail",
+      "durationSec": 11,
+      "visualPrompt": "La interfaz de usuario resalta un bloque de escena específico. Aparecen opciones para estilos visuales (ej. 'cinemático', 'minimalista', 'futurista'). A medida que el usuario selecciona, una imagen (o animación corta) impactante generada por IA se materializa en la vista previa. Simultáneamente, un editor de forma de onda muestra opciones para diferentes tonos de voz y acentos, con el texto 'Powered by Gemini' sutilmente visible.",
+      "voiceOverScript": "Impulsado por Gemini, LogiTrainer Studio genera imágenes impactantes y voces narrativas naturales que dan vida a cada segmento, asegurando una coherencia visual y auditiva profesional en cada proyecto.",
+      "image": "scenes/scene-03.png",
+      "audio": "scenes/scene-03.wav",
+      "segment": "scenes/scene-03.mp4"
+    },
+    {
+      "sceneNumber": 4,
+      "sceneType": "Closing",
+      "durationSec": 12,
+      "visualPrompt": "La interfaz del timeline de LogiTrainer Studio, poblada con las imágenes, pistas de voz y superposiciones de texto generadas previamente. Un usuario realiza ajustes finales, arrastrando y soltando elementos con facilidad. La escena transiciona a un vídeo promocional cautivador y pulido reproduciéndose en un monitor grande. El logo de LogiTrainer Studio aparece prominentemente con un claro llamado a la acción: 'Visítanos en LogiTrainerStudio.com'.",
+      "voiceOverScript": "Todo se ensambla intuitivamente en tu timeline, listo para perfeccionar y exportar. LogiTrainer Studio: la agencia audiovisual automatizada que convierte tu visión en realidad. Descubre el futuro de la creación. Visítanos hoy.",
+      "image": "scenes/scene-04.png",
+      "audio": "scenes/scene-04.wav",
+      "segment": "scenes/scene-04.mp4"
+    }
+  ]
+}

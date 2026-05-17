@@ -5,6 +5,45 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+async function ensureCallerIsAdmin(
+  adminClient: ReturnType<typeof createClient>,
+  userId: string,
+  email: string | undefined,
+): Promise<boolean> {
+  const { data: roleData } = await adminClient
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", userId)
+    .eq("role", "admin")
+    .maybeSingle();
+
+  if (roleData) return true;
+
+  const { data: cfg } = await adminClient
+    .from("back_office_config")
+    .select("admin_email")
+    .eq("id", 1)
+    .maybeSingle();
+
+  if (!cfg?.admin_email || !email || email.toLowerCase() !== cfg.admin_email.toLowerCase()) {
+    return false;
+  }
+
+  await adminClient.from("user_roles").upsert(
+    { user_id: userId, role: "admin" },
+    { onConflict: "user_id,role" },
+  );
+  await adminClient.from("user_approvals").upsert(
+    {
+      user_id: userId,
+      status: "approved",
+      reviewed_at: new Date().toISOString(),
+    },
+    { onConflict: "user_id" },
+  );
+  return true;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -24,15 +63,8 @@ Deno.serve(async (req) => {
     const { data: { user: caller } } = await userClient.auth.getUser();
     if (!caller) throw new Error("Unauthorized");
 
-    // Check admin role using service role client
-    const { data: roleData } = await adminClient
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", caller.id)
-      .eq("role", "admin")
-      .single();
-
-    if (!roleData) throw new Error("Forbidden: admin role required");
+    const isAdmin = await ensureCallerIsAdmin(adminClient, caller.id, caller.email);
+    if (!isAdmin) throw new Error("Forbidden: admin role required");
 
     const { action, user_id } = await req.json();
 

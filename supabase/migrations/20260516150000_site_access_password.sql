@@ -36,7 +36,7 @@ BEGIN
     RETURN false;
   END IF;
 
-  RETURN stored = crypt(attempt, stored);
+  RETURN stored = extensions.crypt(attempt, stored);
 END;
 $$;
 
@@ -46,7 +46,7 @@ GRANT EXECUTE ON FUNCTION public.verify_site_access(text) TO anon;
 
 -- Default access password: LTS-Mayo2026-7kQ!
 INSERT INTO public.site_access_config (password_hash, label)
-VALUES (crypt('LTS-Mayo2026-7kQ!', gen_salt('bf')), 'studio_gate')
+VALUES (extensions.crypt('LTS-Mayo2026-7kQ!', extensions.gen_salt('bf')), 'studio_gate')
 ON CONFLICT (id) DO UPDATE
 SET password_hash = EXCLUDED.password_hash,
     label = EXCLUDED.label,

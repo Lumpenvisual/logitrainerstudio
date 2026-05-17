@@ -84,6 +84,7 @@ async function trySeedAdmin() {
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${serviceKey}`,
+      apikey: serviceKey,
     },
     body: JSON.stringify({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD }),
   });

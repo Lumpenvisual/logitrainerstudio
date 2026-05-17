@@ -1,6 +1,20 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from './useAuth';
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { isBackOfficeEmail } from "@/lib/backOffice";
+import { useAuth } from "./useAuth";
+
+async function loadApprovalState(userId: string) {
+  const [{ data: approval }, { data: roles }] = await Promise.all([
+    supabase.from("user_approvals").select("status").eq("user_id", userId).maybeSingle(),
+    supabase.from("user_roles").select("role").eq("user_id", userId),
+  ]);
+
+  const hasAdminRole = roles?.some((r) => r.role === "admin") ?? false;
+  return {
+    isAdmin: hasAdminRole,
+    isApproved: hasAdminRole || approval?.status === "approved",
+  };
+}
 
 export function useApproval() {
   const { user } = useAuth();
@@ -16,38 +30,31 @@ export function useApproval() {
       return;
     }
 
+    let cancelled = false;
+
     const check = async () => {
       setLoading(true);
       try {
-        // Check approval status
-        const { data: approval } = await supabase
-          .from('user_approvals')
-          .select('status')
-          .eq('user_id', user.id)
-          .single();
+        const state = await loadApprovalState(user.id);
+        if (cancelled) return;
 
-        setIsApproved(approval?.status === 'approved');
-
-        // Check admin role
-        const { data: roles } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', user.id);
-
-        const hasAdminRole = roles?.some((r: { role: string }) => r.role === 'admin') ?? false;
-        const backOfficeEmail = (import.meta.env.VITE_BACK_OFFICE_EMAIL as string | undefined)?.toLowerCase();
-        const emailMatch =
-          !!backOfficeEmail && !!user.email && user.email.toLowerCase() === backOfficeEmail;
-        setIsAdmin(hasAdminRole || emailMatch);
+        const backOffice = isBackOfficeEmail(user.email);
+        setIsAdmin(state.isAdmin || backOffice);
+        setIsApproved(state.isApproved || backOffice);
       } catch {
-        setIsApproved(false);
-        setIsAdmin(false);
+        if (!cancelled) {
+          setIsApproved(isBackOfficeEmail(user.email) ? true : false);
+          setIsAdmin(false);
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
-    check();
+    void check();
+    return () => {
+      cancelled = true;
+    };
   }, [user]);
 
   return { isApproved, isAdmin, loading };

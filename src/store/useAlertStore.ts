@@ -34,10 +34,27 @@ const DEFAULT_SETTINGS: AlertSettings = {
   cost_threshold: 50,
   failure_count_threshold: 5,
   failure_window_minutes: 10,
-  latency_threshold_ms: 5000,
+  latency_threshold_ms: 15000,
   quota_warning_percent: 20,
   alerts_enabled: true,
 };
+
+function latencyThresholdForModel(modelId: string, baseMs: number): number {
+  if (modelId.includes("image") || modelId.includes("tts")) return Math.max(baseMs, 45000);
+  if (modelId.includes("script") || modelId.includes("generate-script")) return Math.max(baseMs, 20000);
+  if (modelId.includes("3-flash") || modelId.includes("3.1")) return Math.max(baseMs, 12000);
+  return baseMs;
+}
+
+const alertCooldown = new Map<string, number>();
+const ALERT_COOLDOWN_MS = 5 * 60 * 1000;
+
+function canEmitAlert(key: string): boolean {
+  const last = alertCooldown.get(key) ?? 0;
+  if (Date.now() - last < ALERT_COOLDOWN_MS) return false;
+  alertCooldown.set(key, Date.now());
+  return true;
+}
 
 interface AlertStore {
   alerts: SmartAlert[];
@@ -101,11 +118,12 @@ export const useAlertStore = create<AlertStore>()(
       if (data) {
         const d = data as any;
         set((s) => {
+          const savedLatency = Number(d.latency_threshold_ms) || DEFAULT_SETTINGS.latency_threshold_ms;
           s.settings = {
             cost_threshold: d.cost_threshold,
             failure_count_threshold: d.failure_count_threshold,
             failure_window_minutes: d.failure_window_minutes,
-            latency_threshold_ms: d.latency_threshold_ms,
+            latency_threshold_ms: savedLatency < 10000 ? DEFAULT_SETTINGS.latency_threshold_ms : savedLatency,
             quota_warning_percent: d.quota_warning_percent,
             alerts_enabled: d.alerts_enabled,
           };
@@ -209,17 +227,22 @@ export const useAlertStore = create<AlertStore>()(
       const { settings, createAlert } = get();
       if (!settings.alerts_enabled) return;
 
-      // 1. High latency check
-      if (callData.latencyMs > settings.latency_threshold_ms) {
+      // 1. High latency (only on success — errors use failure alerts; cooldown avoids spam)
+      const latencyLimit = latencyThresholdForModel(callData.model_id, settings.latency_threshold_ms);
+      if (
+        callData.status === 'success' &&
+        callData.latencyMs > latencyLimit &&
+        canEmitAlert(`latency:${callData.model_id}`)
+      ) {
         createAlert(userId, {
           alert_type: 'high_latency',
-          severity: callData.latencyMs > settings.latency_threshold_ms * 2 ? 'critical' : 'warning',
+          severity: callData.latencyMs > latencyLimit * 2 ? 'critical' : 'warning',
           title: 'Alta latencia detectada',
-          message: `${callData.model_id} respondió en ${(callData.latencyMs / 1000).toFixed(1)}s (umbral: ${(settings.latency_threshold_ms / 1000).toFixed(1)}s)`,
+          message: `${callData.model_id} respondió en ${(callData.latencyMs / 1000).toFixed(1)}s (umbral: ${(latencyLimit / 1000).toFixed(1)}s)`,
           provider_id: callData.provider_id,
           model_id: callData.model_id,
           metric_value: callData.latencyMs,
-          threshold_value: settings.latency_threshold_ms,
+          threshold_value: latencyLimit,
         });
       }
 
@@ -238,7 +261,10 @@ export const useAlertStore = create<AlertStore>()(
         const filtered = timestamps.filter((t) => t > cutoff);
         recentFailures.set(key, filtered);
 
-        if (filtered.length >= settings.failure_count_threshold) {
+        if (
+          filtered.length >= settings.failure_count_threshold &&
+          canEmitAlert(`failures:${callData.provider_id}`)
+        ) {
           createAlert(userId, {
             alert_type: 'repeated_failures',
             severity: 'critical',

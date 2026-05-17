@@ -8,6 +8,9 @@
   },
   "scripts": {
     "dev": "vite",
+    "start": "npm run platform",
+    "platform": "node scripts/ensure-demo.mjs && vite",
+    "prebuild": "node scripts/ensure-demo.mjs",
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
@@ -16,7 +19,15 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:e2e:prod": "playwright test",
-    "seed:back-office": "node scripts/seed-back-office.mjs"
+    "test:e2e:all": "npm run verify:prod",
+    "verify:prod": "npm run check:secrets && npm run test:ai-apis && playwright test",
+    "verify:all": "npm run verify:prod",
+    "seed:back-office": "node scripts/seed-back-office.mjs",
+    "test:gemini": "node scripts/test-gemini-edge.mjs",
+    "test:ai-apis": "node scripts/test-all-ai-apis.mjs",
+    "audit:lts": "node scripts/audit-lts.mjs",
+    "demo:generate": "node scripts/generate-logitrainer-demo.mjs",
+    "check:secrets": "node scripts/check-no-secrets.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

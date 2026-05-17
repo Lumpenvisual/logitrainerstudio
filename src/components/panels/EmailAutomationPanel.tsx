@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
+import { generateEmailSequence } from "@/services/aiService";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -59,10 +60,8 @@ export function EmailAutomationPanel() {
     if (!topic.trim() || !user) return;
     setGenerating(true);
     try {
-      const { data, error } = await supabase.functions.invoke("ai-email-sequence", {
-        body: { topic, framework, audience },
-      });
-      if (error) throw error;
+      const { data, error } = await generateEmailSequence({ topic, framework, audience });
+      if (error) throw new Error(error);
       const seq = data?.sequence;
       if (!seq?.emails) throw new Error("Invalid response");
 

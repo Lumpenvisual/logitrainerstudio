@@ -4,12 +4,12 @@ import { useI18n } from '@/i18n/useI18n';
 import { Image, Mic, Video, Loader2, Zap, Layers, Check, AlertCircle, Eye, Wand2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useState } from 'react';
-import { generateImage } from '@/services/aiService';
+import { generateAudio, generateImage } from '@/services/aiService';
 import { getModelById } from '@/services/apiRegistry';
 import { toast } from 'sonner';
 
 export function StudioView({ onOpenImageLab }: { onOpenImageLab: (sceneId: string) => void }) {
-  const { scenes, updateScene, addLog, addAsset } = useProjectStore();
+  const { scenes, updateScene, addLog, addAsset, assets: projectAssets } = useProjectStore();
   const { preferences, addCallLog } = useAPIStore();
   const { t } = useI18n();
   const [generatingAssets, setGeneratingAssets] = useState<Record<string, Record<string, boolean>>>({});
@@ -46,16 +46,44 @@ export function StudioView({ onOpenImageLab }: { onOpenImageLab: (sceneId: strin
         toast.error(`Scene ${scene.sceneNumber}: ${result.error}`);
       } else if (result.data) {
         setSceneImages((prev) => ({ ...prev, [sceneId]: result.data!.imageUrl }));
-        const assetId = addAsset({ type: 'image', url: result.data.imageUrl, duration: 0, name: `Scene ${scene.sceneNumber} Image` });
+        const assetId = addAsset({ type: 'image', url: result.data.imageUrl, duration: scene.durationTargetSec, name: `Scene ${scene.sceneNumber} Image` });
         updateScene(sceneId, { status: { ...scene.status, image: 'ready' }, assets: { ...scene.assets, image: assetId } });
         addLog('success', `Image ready for scene ${scene.sceneNumber} (${result.latencyMs}ms)`);
         addCallLog({ function: 'generate-image', model: result.model || model, status: 'success', latencyMs: result.latencyMs || 0 });
         toast.success(`Scene ${scene.sceneNumber} image ready`);
       }
+    } else if (type === 'audio') {
+      const model = preferences.voiceSynthesis.startsWith('google/')
+        ? preferences.voiceSynthesis
+        : 'google/gemini-2.5-flash-preview-tts';
+      const script = scene.voiceOverScript?.trim() || scene.visualPrompt;
+      addLog('info', `Generating voiceover for scene ${scene.sceneNumber} with ${getModelById(model)?.name || 'Gemini TTS'}...`);
+
+      const result = await generateAudio(script, model, 'es');
+
+      if (result.error) {
+        addLog('error', `Audio gen failed: ${result.error}`);
+        updateScene(sceneId, { status: { ...scene.status, audio: 'error' } });
+        addCallLog({ function: 'generate-audio', model, status: 'error', latencyMs: result.latencyMs || 0, error: result.error });
+        toast.error(`Scene ${scene.sceneNumber}: ${result.error}`);
+      } else if (result.data?.audioUrl) {
+        const assetId = addAsset({
+          type: 'audio',
+          url: result.data.audioUrl,
+          duration: scene.durationTargetSec,
+          name: `Scene ${scene.sceneNumber} Voiceover`,
+        });
+        updateScene(sceneId, {
+          status: { ...scene.status, audio: 'ready' },
+          assets: { ...scene.assets, audio: assetId },
+        });
+        addLog('success', `Audio ready for scene ${scene.sceneNumber} (${result.latencyMs}ms)`);
+        addCallLog({ function: 'generate-audio', model: result.model || model, status: 'success', latencyMs: result.latencyMs || 0 });
+        toast.success(`Scene ${scene.sceneNumber} audio ready`);
+      }
     } else {
       addLog('info', `Generating ${type} for scene ${scene.sceneNumber} (simulated)...`);
-      const delay = type === 'video' ? 3000 : 2000;
-      await new Promise((r) => setTimeout(r, delay));
+      await new Promise((r) => setTimeout(r, 3000));
       updateScene(sceneId, { status: { ...scene.status, [type]: 'ready' } });
       addLog('success', `${type} ready for scene ${scene.sceneNumber}`);
       toast.success(`Scene ${scene.sceneNumber} ${type} ready`);
@@ -174,7 +202,15 @@ export function StudioView({ onOpenImageLab }: { onOpenImageLab: (sceneId: strin
                 <div className="flex-1 min-w-0">
                   <p className="text-xs text-foreground/70 leading-relaxed mb-2 line-clamp-2">{scene.visualPrompt}</p>
                   <p className="text-[11px] text-muted-foreground/40 italic mb-3 line-clamp-1">"{scene.voiceOverScript}"</p>
-                  <div className="flex gap-2">
+                  {scene.status.audio === 'ready' && scene.assets.audio && projectAssets[scene.assets.audio]?.url && (
+                    <audio
+                      controls
+                      preload="none"
+                      className="mb-3 h-8 w-full max-w-md"
+                      src={projectAssets[scene.assets.audio].url}
+                    />
+                  )}
+                  <motion.div className="flex gap-2">
                     {[
                       { type: 'image' as const, icon: Image, label: t('common.image') },
                       { type: 'audio' as const, icon: Mic, label: t('common.audio') },
@@ -198,7 +234,7 @@ export function StudioView({ onOpenImageLab }: { onOpenImageLab: (sceneId: strin
                         </button>
                       );
                     })}
-                  </div>
+                  </motion.div>
                 </div>
               </div>
             </motion.div>

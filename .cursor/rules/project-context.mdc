@@ -1,0 +1,56 @@
+---
+description: LogiTrainer Studio — contexto canónico del proyecto (memoria persistente)
+alwaysApply: true
+---
+
+# LogiTrainer Studio
+
+## Ubicación y repos
+
+- **Código canónico:** `c:\proyectos\logitrainerstudio`
+- **GitHub:** https://github.com/Lumpenvisual/logitrainerstudio
+- **No confundir** con `c:\proyectos\logitrainer_app` (plantilla vacía, sin relación)
+
+## Despliegue
+
+- **Producción:** https://logitrainerstudio.vercel.app
+- **Deploy:** `npx vercel deploy --prod --yes`
+- **SPA:** `vercel.json` rewrites a `index.html`
+
+## Supabase (propietario)
+
+- **Project ref:** `zghzhfheyawvbdddsybe`
+- **Secrets:** `GEMINI_API_KEY` (Google AI Studio — no en repo)
+- **Migraciones:** `echo y | npx supabase db push`
+- **Functions:** `npx supabase functions deploy <name> --project-ref zghzhfheyawvbdddsybe`
+
+## IA
+
+- Provider: **Google Gemini** nativo (`supabase/functions/_shared/gemini.ts`)
+- Cliente: `src/services/aiService.ts` + `src/lib/edgeClient.ts` (no `functions.invoke`)
+- Smoke: `npm run test:ai-apis` | E2E UI: `npm run test:e2e` | Todo: `npm run verify:prod`
+
+## Auth y acceso
+
+- Site gate RPC + password en env
+- Back-office: `backoffice@logitrainerstudio.app` — admin vía `back_office_config` + `admin-approve-user`
+- Redirect URLs en Supabase: producción + `localhost:8080` / `8081`
+
+## E2E helpers
+
+- `skipOnboarding()` → `lt-onboarding-complete`
+- `enterWorkspaceFromWelcome()` → proyecto reciente o New Project → Create & Enter
+
+## Demo público
+
+- `/demo` sin site gate — video + escenas en `public/demo/logitrainer/`
+- `npm run demo:generate` | Skill: `lts-demo`
+
+## Verificado
+
+- `npm run verify:prod` — secrets + 7 APIs + 8 Playwright (incl. `/demo`)
+- Producción: https://logitrainerstudio.vercel.app
+
+## Skills Cursor
+
+`lts-supabase-backend`, `lts-edge-client`, `lts-gemini-api`, `lts-e2e-verification`, `lts-demo` — regla `lts-backend.mdc`

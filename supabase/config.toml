@@ -1,11 +1,16 @@
-project_id = "bcobgfxepxmmcheuliai"
+project_id = "zghzhfheyawvbdddsybe"
 
+# Public gate — no JWT (uses service role inside)
 [functions.verify-site-access]
 verify_jwt = false
 
 [functions.seed-back-office]
 verify_jwt = false
 
+[functions.seed-admin]
+verify_jwt = false
+
+# AI + admin — JWT optional; functions validate Authorization when present
 [functions.ai-generate-script]
 verify_jwt = false
 
@@ -15,5 +20,20 @@ verify_jwt = false
 [functions.ai-generate-image]
 verify_jwt = false
 
+[functions.ai-generate-audio]
+verify_jwt = false
+
 [functions.ai-analyze-image]
+verify_jwt = false
+
+[functions.ai-marketing-content]
+verify_jwt = false
+
+[functions.ai-email-sequence]
+verify_jwt = false
+
+[functions.agent-orchestrator]
+verify_jwt = false
+
+[functions.admin-approve-user]
 verify_jwt = false
