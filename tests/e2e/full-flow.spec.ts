@@ -12,10 +12,10 @@ import {
 
 test.describe("Full production flow", () => {
   test("site gate → auth → workspace", async ({ page }) => {
-    await page.goto("/");
-    await expect(page.getByLabel(/Access password/i)).toBeVisible({ timeout: 10_000 });
-    await page.getByLabel(/Access password/i).fill(SITE_PASSWORD);
-    await page.getByRole("button", { name: /Enter studio/i }).click();
+    await page.goto("/studio/login");
+    await page.getByLabel(/Contraseña de acceso/i).fill(SITE_PASSWORD);
+    await page.getByRole("button", { name: /Acceder al Studio/i }).click();
+    await page.goto("/auth");
     await expect(page.getByRole("heading", { name: /Welcome back/i })).toBeVisible({ timeout: 20_000 });
 
     await page.getByPlaceholder("you@example.com").fill(ADMIN_EMAIL);

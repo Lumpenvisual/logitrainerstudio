@@ -15,12 +15,12 @@ export async function skipOnboarding(page: Page) {
 }
 
 export async function passSiteGate(page: Page) {
-  await page.goto("/auth");
-  const gate = page.getByLabel(/Access password/i);
+  await page.goto("/studio/login");
+  const gate = page.getByLabel(/Contraseña de acceso|Access password/i);
   if (await gate.isVisible({ timeout: 5000 }).catch(() => false)) {
     await gate.fill(SITE_PASSWORD);
-    await page.getByRole("button", { name: /Enter studio/i }).click();
-    await expect(page.getByRole("heading", { name: /LogiTrainer Studio/i })).toBeHidden({ timeout: 20_000 });
+    await page.getByRole("button", { name: /Acceder al Studio|Enter studio/i }).click();
+    await expect(page).toHaveURL(/\/studio\/dashboard/, { timeout: 15_000 });
   }
 }
 

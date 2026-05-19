@@ -150,6 +150,7 @@ export function WelcomeScreen({ onEnter, recentProjects = [], onLoadProject, onD
                   <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
                 </button>
                 <div className="flex items-center gap-5 mt-1">
+                  <Link to="/studio" className="text-xs text-muted-foreground/35 hover:text-primary transition-colors font-mono">Acceso Studio</Link>
                   <Link to="/demo" className="text-xs text-muted-foreground/35 hover:text-primary transition-colors font-mono">Ver demo</Link>
                   <Link to="/about" className="text-xs text-muted-foreground/35 hover:text-primary transition-colors font-mono">{t('welcome.about')}</Link>
                   <span className="text-[10px] font-mono text-muted-foreground/25">{t('app.version')}</span>

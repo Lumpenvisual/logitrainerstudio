@@ -1,10 +1,11 @@
 import { ReactNode } from "react";
 import { Loader2 } from "lucide-react";
+import { Navigate, useLocation } from "react-router-dom";
 import { useSiteAccess } from "@/hooks/useSiteAccess";
-import { SiteAccessGate } from "@/pages/SiteAccessGate";
 
 export function SiteAccessGuard({ children }: { children: ReactNode }) {
-  const { granted, checking, verifying, verifyPassword } = useSiteAccess();
+  const { granted, checking } = useSiteAccess();
+  const location = useLocation();
 
   if (checking) {
     return (
@@ -15,7 +16,7 @@ export function SiteAccessGuard({ children }: { children: ReactNode }) {
   }
 
   if (!granted) {
-    return <SiteAccessGate verifyPassword={verifyPassword} verifying={verifying} />;
+    return <Navigate to="/studio/login" replace state={{ from: location.pathname + location.search }} />;
   }
 
   return <>{children}</>;

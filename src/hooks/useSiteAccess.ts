@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { isBackOfficeEmail } from "@/lib/backOffice";
 import { clearSiteAccessGrant, getSiteAccessGrant, setSiteAccessGrant } from "@/lib/siteAccess";
+import { clearStudioHubSession, getStudioHubSession, setStudioHubSession } from "@/lib/studioHub";
 import { matchesAccessPasswordHash } from "@/lib/siteAccessCrypto";
 import { verifySiteAccess } from "@/services/aiService";
 
@@ -42,14 +43,20 @@ async function verifyViaEnvHash(password: string): Promise<boolean> {
 }
 
 export function useSiteAccess() {
-  const [granted, setGranted] = useState(() => !!getSiteAccessGrant());
+  const [granted, setGranted] = useState(
+    () => !!getSiteAccessGrant() || !!getStudioHubSession(),
+  );
   const [checking, setChecking] = useState(true);
   const [verifying, setVerifying] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     const init = async () => {
-      if (getSiteAccessGrant()) {
+      const hub = getStudioHubSession();
+      if (getSiteAccessGrant() || hub) {
+        if (hub && !getSiteAccessGrant()) {
+          setSiteAccessGrant(hub.expiresAt);
+        }
         if (!cancelled) {
           setGranted(true);
           setChecking(false);
@@ -79,7 +86,7 @@ export function useSiteAccess() {
       if (valid === null) valid = await verifyViaEnvHash(password);
       if (!valid) return { error: "Incorrect access password" };
 
-      setSiteAccessGrant(Date.now() + ACCESS_TTL_MS);
+      setStudioHubSession();
       setGranted(true);
       return { error: null };
     } catch (err) {
@@ -91,7 +98,7 @@ export function useSiteAccess() {
   }, []);
 
   const revokeAccess = useCallback(() => {
-    clearSiteAccessGrant();
+    clearStudioHubSession();
     setGranted(false);
   }, []);
 

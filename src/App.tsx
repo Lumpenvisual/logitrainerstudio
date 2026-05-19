@@ -11,6 +11,7 @@ import { SiteAccessGuard } from "@/components/SiteAccessGuard";
 import Index from "./pages/Index";
 import About from "./pages/About";
 import Demo from "./pages/Demo";
+import StudioHubIndex, { StudioHubDashboard, StudioHubLogin } from "./pages/StudioHub";
 import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
@@ -30,6 +31,9 @@ const App = () => (
             <BrowserRouter>
               <Routes>
                 <Route path="/demo" element={<Demo />} />
+                <Route path="/studio" element={<StudioHubIndex />} />
+                <Route path="/studio/login" element={<StudioHubLogin />} />
+                <Route path="/studio/dashboard" element={<StudioHubDashboard />} />
                 <Route element={<SiteAccessGuard><Outlet /></SiteAccessGuard>}>
                   <Route path="/" element={<Index />} />
                   <Route path="/auth" element={<Auth />} />
