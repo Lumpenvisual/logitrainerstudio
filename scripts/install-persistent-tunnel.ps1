@@ -43,13 +43,36 @@ if (-not (Get-Command cloudflared -ErrorAction SilentlyContinue)) {
 New-Item -ItemType Directory -Force -Path $CloudflaredDir | Out-Null
 Set-Location $ProjectRoot
 
+$envLocal = Join-Path $ProjectRoot ".env.local"
+if (Test-Path $envLocal) {
+  Get-Content $envLocal | ForEach-Object {
+    if ($_ -match '^\s*([^#][^=]+)=(.*)$') {
+      Set-Item -Path "Env:$($matches[1].Trim())" -Value $matches[2].Trim().Trim('"').Trim("'")
+    }
+  }
+}
+
+# --- Token (sin login interactivo) ---
+if ($env:CLOUDFLARE_TUNNEL_TOKEN) {
+  Write-Host "Usando CLOUDFLARE_TUNNEL_TOKEN — tarea persistente stack" -ForegroundColor Cyan
+  Require-Admin
+  & (Join-Path $ProjectRoot "scripts\install-persistent-stack.ps1")
+  exit 0
+}
+
 # --- Login ---
+New-Item -ItemType Directory -Force -Path (Split-Path $CertPath) | Out-Null
 if (-not $SkipLogin -and -not (Test-Path $CertPath)) {
   Write-Host "`nAbre el navegador y autoriza logitrainerstudio.com..." -ForegroundColor Cyan
-  Start-Process cloudflared -ArgumentList "tunnel", "login" -Wait
+  cloudflared tunnel login
 }
 if (-not (Test-Path $CertPath)) {
-  Write-Error "Sin cert.pem. Completa cloudflared tunnel login y vuelve a ejecutar este script."
+  Write-Error @"
+Sin cert.pem. Opciones:
+  1) scripts\open-cloudflare-login.bat
+  2) Añade CLOUDFLARE_TUNNEL_TOKEN en .env.local (Zero Trust > Tunnels > Install connector)
+  3) npm run tunnel:verify  (usa quick tunnel sin login)
+"@
 }
 
 # --- Crear túnel ---

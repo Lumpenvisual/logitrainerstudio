@@ -22,10 +22,12 @@ export async function passSiteGate(page: Page) {
     await page.getByRole("button", { name: /Acceder al Studio|Enter studio/i }).click();
     await expect(page).toHaveURL(/\/studio\/dashboard/, { timeout: 15_000 });
   }
+  await page.goto("/auth");
 }
 
 export async function loginAsBackOffice(page: Page) {
   await passSiteGate(page);
+  await expect(page.getByPlaceholder("you@example.com")).toBeVisible({ timeout: 20_000 });
   await page.getByPlaceholder("you@example.com").fill(ADMIN_EMAIL);
   await page.locator('input[type="password"]').first().fill(ADMIN_PASSWORD);
   await page.getByRole("button", { name: /^sign in$/i }).click();

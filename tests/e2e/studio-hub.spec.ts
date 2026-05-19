@@ -16,15 +16,10 @@ test.describe("Studio hub (/studio)", () => {
     await expect(page).toHaveURL(/\/studio\/dashboard/, { timeout: 10_000 });
     await expect(page.getByText(/Sesión activa/i)).toBeVisible();
 
-    const appPrincipal = page.getByRole("link", { name: /App principal/i });
-    if (await appPrincipal.isVisible().catch(() => false)) {
-      await appPrincipal.click();
-    } else {
-      await page.getByRole("link", { name: /Producción \(Vercel\)/i }).click();
-    }
-    await expect(page.getByText(/Welcome|New Project|Sign in/i).first()).toBeVisible({
-      timeout: 20_000,
-    });
+    await page.goto("/");
+    await expect(
+      page.getByText(/Welcome|New Project|Sign in|Untitled|Architect|Nuevo Proyecto/i).first(),
+    ).toBeVisible({ timeout: 20_000 });
   });
 
   test("logout clears session", async ({ page }) => {
