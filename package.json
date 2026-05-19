@@ -19,6 +19,7 @@
     "tunnel:stack:stop": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/tunnel-stack.ps1 -Action stop",
     "tunnel:verify": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/tunnel-verify-e2e.ps1",
     "tunnel:persistent:stack": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install-persistent-stack.ps1",
+    "publish:trycloudflare": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/publish-trycloudflare.ps1",
     "test:e2e:tunnel": "node scripts/e2e-tunnel.mjs",
     "test:e2e:tunnel:quick": "node scripts/e2e-tunnel.mjs",
     "tunnel:start": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/start-tunnel.ps1",

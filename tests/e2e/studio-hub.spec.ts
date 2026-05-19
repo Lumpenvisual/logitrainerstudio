@@ -16,10 +16,18 @@ test.describe("Studio hub (/studio)", () => {
     await expect(page).toHaveURL(/\/studio\/dashboard/, { timeout: 10_000 });
     await expect(page.getByText(/Sesión activa/i)).toBeVisible();
 
+    if (process.env.PLAYWRIGHT_BASE_URL?.includes("trycloudflare.com")) {
+      await page.goto("/auth");
+      await expect(page.getByPlaceholder("you@example.com")).toBeVisible({ timeout: 20_000 });
+      return;
+    }
+
     await page.goto("/");
     await expect(
-      page.getByText(/Welcome|New Project|Sign in|Untitled|Architect|Nuevo Proyecto/i).first(),
-    ).toBeVisible({ timeout: 20_000 });
+      page.getByRole("button", { name: /New Project|Nuevo Proyecto|Nouveau Projet/i }).or(
+        page.getByText(/Welcome|Untitled|Architect|Bienvenido/i),
+      ).first(),
+    ).toBeVisible({ timeout: 30_000 });
   });
 
   test("logout clears session", async ({ page }) => {

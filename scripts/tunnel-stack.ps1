@@ -126,13 +126,15 @@ function Start-Stack {
   $tunnelPid = $null
   $url = $null
 
-  if ((Test-Path $ConfigFile) -and (Test-Path (Join-Path $env:USERPROFILE ".cloudflared\cert.pem"))) {
+  $forceQuick = $env:LTS_TUNNEL_MODE -eq "quick"
+
+  if (-not $forceQuick -and (Test-Path $ConfigFile) -and (Test-Path (Join-Path $env:USERPROFILE ".cloudflared\cert.pem"))) {
     Write-Host "Modo: túnel nombrado (config.yml)" -ForegroundColor Cyan
     $r = Start-TunnelNamed
     $tunnelPid = $r.pid
     $url = $r.url
   }
-  elseif ($env:CLOUDFLARE_TUNNEL_TOKEN) {
+  elseif (-not $forceQuick -and $env:CLOUDFLARE_TUNNEL_TOKEN) {
     Write-Host "Modo: túnel con token" -ForegroundColor Cyan
     $r = Start-TunnelToken $env:CLOUDFLARE_TUNNEL_TOKEN
     $tunnelPid = $r.pid

@@ -31,6 +31,8 @@ public/demo/logitrainer/concat.txt
 public/tunnel-info.json
 .cloudflared/quick-tunnel-url.txt
 .cloudflared/quick-tunnel.log
+.cloudflared/watchdog.lock
+TRYCLOUDFLARE-URL.txt
 
 # Supabase CLI temp (no commitear)
 supabase/.temp/

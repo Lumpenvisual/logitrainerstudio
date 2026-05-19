@@ -84,8 +84,13 @@ export function isLocalDevHost(): boolean {
   return host === "localhost" || host === "127.0.0.1" || host === "[::1]";
 }
 
+export function isQuickTunnelHost(): boolean {
+  return window.location.hostname.toLowerCase().endsWith(".trycloudflare.com");
+}
+
 export function isTunnelHost(): boolean {
   const host = window.location.hostname.toLowerCase();
+  if (isQuickTunnelHost()) return true;
   if (TUNNEL_HOSTS.includes(host as (typeof TUNNEL_HOSTS)[number])) return true;
   const envHost = import.meta.env.VITE_TUNNEL_HOST as string | undefined;
   if (envHost && host === envHost.toLowerCase()) return true;

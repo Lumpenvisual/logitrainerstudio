@@ -24,6 +24,21 @@ Expone tu entorno local (`localhost:8080`) en Internet con un dominio fijo y acc
 
 ---
 
+## Publicar en trycloudflare.com (Quick Tunnel)
+
+Un comando publica la app y configura persistencia local:
+
+```powershell
+cd C:\proyectos\logitrainerstudio
+npm run publish:trycloudflare
+```
+
+- URL actual: `TRYCLOUDFLARE-URL.txt` y `.cloudflared\quick-tunnel-url.txt`
+- Tareas: `LogiTrainerStudio-TunnelStack` (al iniciar sesión) + `LogiTrainerStudio-TunnelWatchdog` (cada 5 min)
+- E2E: `npm run tunnel:verify`
+
+Según [Cloudflare Quick Tunnels](https://trycloudflare.com/), la URL es **efímera** si reinicias `cloudflared`; mientras el proceso siga activo en tu PC, la URL se mantiene.
+
 ## Instalación rápida (Windows)
 
 ### Opción A — Comandos Cloudflare (manual)
