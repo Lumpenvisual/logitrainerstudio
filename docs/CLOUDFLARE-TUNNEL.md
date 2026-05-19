@@ -83,7 +83,21 @@ npm run tunnel:start
 
 ---
 
-## Servicio Windows 24/7
+## Túnel persistente 24/7 (recomendado)
+
+1. **Login** (una vez): `scripts\open-cloudflare-login.bat` o `cloudflared tunnel login`
+2. **Instalar servicio + tarea Vite** (PowerShell **como Administrador**):
+
+```powershell
+cd C:\proyectos\logitrainerstudio
+npm run tunnel:persistent
+```
+
+Esto registra:
+- Servicio Windows `cloudflared` (arranque automático → `studio.logitrainerstudio.com`)
+- Tarea `LogiTrainerStudio-Vite` (`npm start` al iniciar sesión)
+
+## Servicio Windows (solo túnel)
 
 Ejecutar **PowerShell como Administrador**:
 
