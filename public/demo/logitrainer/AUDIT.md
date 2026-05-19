@@ -9,7 +9,7 @@ Generado: automático tras `npm run audit:lts` + `npm run demo:generate`.
 | Secretos en repo | `npm run check:secrets` | ✓ |
 | APIs Gemini (7 edges) | `npm run test:ai-apis` | ✓ |
 | Build producción | `npm run build` | ✓ |
-| E2E Playwright (prod) | `npm run verify:prod` | ✓ 8/8 (incl. `/demo`) |
+| E2E Playwright (prod) | `npm run verify:prod` | ✓ 10/10 (incl. `/demo`, `/studio`) |
 | Demo video | `npm run demo:generate` | ✓ `logitrainer-promo.mp4` |
 
 ## Pipeline demo
