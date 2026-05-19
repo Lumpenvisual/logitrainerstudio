@@ -17,11 +17,12 @@ $login = "$base/studio/login"
 
 Write-Host "Comprobando $login ..." -ForegroundColor Cyan
 $ok = $false
-foreach ($i in 1..30) {
+Start-Sleep -Seconds 8
+foreach ($i in 1..45) {
   try {
-    $r = Invoke-WebRequest -Uri $login -UseBasicParsing -TimeoutSec 20
+    $r = Invoke-WebRequest -Uri $login -UseBasicParsing -TimeoutSec 25
     if ($r.StatusCode -eq 200) { $ok = $true; break }
-  } catch { Start-Sleep -Seconds 2 }
+  } catch { Start-Sleep -Seconds 3 }
 }
 if (-not $ok) { throw "Túnel no responde 200 en $login" }
 Write-Host "HTTP 200 OK" -ForegroundColor Green

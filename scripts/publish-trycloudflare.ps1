@@ -45,27 +45,30 @@ try {
 
 if (-not $healthOk) {
   & $StackScript -Action stop | Out-Null
-  Start-Sleep -Seconds 2
-  & $StackScript -Action start | Out-Null
   Start-Sleep -Seconds 3
+  & $StackScript -Action start | Out-Null
+  Start-Sleep -Seconds 10
 } else {
   Write-Host "Stack ya saludable — conservando URL actual." -ForegroundColor Yellow
 }
 
-$url = (& $StackScript -Action url | Select-Object -Last 1).ToString().Trim()
+$url = if (Test-Path $UrlFile) { (Get-Content $UrlFile -Raw).Trim() } else { "" }
+if ($url -notmatch '^https://') {
+  $url = (& $StackScript -Action url | Select-Object -Last 1).ToString().Trim()
+}
 if ($url -notmatch '^https://') { throw "No se obtuvo URL pública" }
 
 $studio = "$url/studio"
 $info = @"
-LogiTrainer Studio — Quick Tunnel (Cloudflare)
+LogiTrainer Studio — Túnel Cloudflare (localhost:8080)
 Actualizado: $(Get-Date -Format "yyyy-MM-dd HH:mm:ss")
 
 URL pública:  $url
 Login Studio:   $studio
 Contraseña:   LTS-Mayo2026-7kQ!
 
-Persistencia: tareas Windows + watchdog cada 5 min.
-Ver: docs/CLOUDFLARE-TUNNEL.md
+Persistencia: LogiTrainerStudio-TunnelStack + TunnelWatchdog (cada 5 min)
+URL en vivo:  .cloudflared\quick-tunnel-url.txt
 "@
 $info | Set-Content $PublicInfo -Encoding UTF8
 $url | Set-Content $UrlFile -Encoding UTF8

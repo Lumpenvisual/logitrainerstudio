@@ -103,15 +103,19 @@ function Start-TunnelQuick {
   Remove-Item $LogFile -Force -ErrorAction SilentlyContinue
   $p = Start-Process -FilePath "cloudflared" -ArgumentList "tunnel", "--url", "http://localhost:8080" `
     -RedirectStandardError $LogFile -WorkingDirectory $ProjectRoot -WindowStyle Hidden -PassThru
-  foreach ($i in 1..30) {
+  foreach ($i in 1..45) {
     Start-Sleep -Seconds 1
     $url = Get-QuickTunnelUrl
     if ($url) {
       $url | Set-Content $UrlFile -Encoding UTF8
-      return @{ pid = $p.Id; url = $url }
+      Start-Sleep -Seconds 5
+      try {
+        $r = Invoke-WebRequest -Uri "$url/studio/login" -UseBasicParsing -TimeoutSec 20
+        if ($r.StatusCode -eq 200) { return @{ pid = $p.Id; url = $url } }
+      } catch { /* esperar a Vite */ }
     }
   }
-  throw "No se obtuvo URL trycloudflare. Ver $LogFile"
+  throw "No se obtuvo URL trycloudflare operativa. Ver $LogFile"
 }
 
 function Start-Stack {
