@@ -1,0 +1,4 @@
+# Credenciales del túnel — nunca commitear
+*.json
+config.yml
+cert.pem

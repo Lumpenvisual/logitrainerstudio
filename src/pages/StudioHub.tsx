@@ -4,20 +4,23 @@ import {
   Activity,
   ExternalLink,
   Globe,
-  Laptop,
+  FolderGit2,
   Lock,
   LogOut,
   MonitorPlay,
   KeyRound,
   AlertCircle,
+  Server,
+  Cloud,
 } from "lucide-react";
 import {
   clearStudioHubSession,
+  fetchTunnelProjectInfo,
   getHubLinks,
   getStudioHubSession,
-  setStudioHubSession,
-  verifyStudioPassword,
+  type TunnelProjectInfo,
 } from "@/lib/studioHub";
+import { useStudioAuth, useRequireStudioAuth } from "@/hooks/useStudioAuth";
 
 function StudioShell({ children }: { children: React.ReactNode }) {
   return (
@@ -37,23 +40,20 @@ function StudioShell({ children }: { children: React.ReactNode }) {
 export function StudioHubLogin() {
   const navigate = useNavigate();
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const { authenticated, error, setError, login } = useStudioAuth();
+  const links = getHubLinks();
 
   useEffect(() => {
-    if (getStudioHubSession()) {
+    if (authenticated || getStudioHubSession()) {
       navigate("/studio/dashboard", { replace: true });
     }
-  }, [navigate]);
+  }, [authenticated, navigate]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
-    if (!verifyStudioPassword(password)) {
-      setError("Contraseña incorrecta. Inténtalo de nuevo.");
-      return;
+    if (login(password)) {
+      navigate("/studio/dashboard", { replace: true });
     }
-    setStudioHubSession();
-    navigate("/studio/dashboard", { replace: true });
   };
 
   return (
@@ -69,6 +69,11 @@ export function StudioHubLogin() {
           <p className="mt-2 text-center text-sm text-muted-foreground">
             Acceso unificado — una sola contraseña para toda la plataforma.
           </p>
+          {links.isTunnel && (
+            <p className="mt-2 text-center text-[10px] font-mono text-primary/80">
+              Túnel Cloudflare · {links.tunnelPublicUrl}
+            </p>
+          )}
 
           <form onSubmit={handleSubmit} className="mt-8 space-y-4">
             <div>
@@ -168,24 +173,75 @@ function HubLinkCard({
   return <Link to={href}>{inner}</Link>;
 }
 
+function ProjectInfoPanel({ info }: { info: TunnelProjectInfo | null }) {
+  if (!info) {
+    return (
+      <div className="rounded-xl border border-border/40 bg-card/30 p-5 text-xs text-muted-foreground">
+        <p className="flex items-center gap-2 font-medium text-foreground">
+          <FolderGit2 className="h-4 w-4 text-primary" />
+          Info del proyecto
+        </p>
+        <p className="mt-2">Ejecuta <code className="font-mono text-primary/90">npm start</code> para generar tunnel-info.json.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-xl border border-border/50 bg-card/40 p-5 sm:col-span-2">
+      <p className="flex items-center gap-2 font-display text-sm font-semibold">
+        <FolderGit2 className="h-4 w-4 text-primary" />
+        Info del proyecto
+      </p>
+      <dl className="mt-4 grid gap-2 text-xs sm:grid-cols-2">
+        <div>
+          <dt className="text-muted-foreground">Carpeta</dt>
+          <dd className="font-mono break-all text-foreground/90">{info.projectPath}</dd>
+        </div>
+        <div>
+          <dt className="text-muted-foreground">Git</dt>
+          <dd className="font-mono">
+            {info.gitBranch ?? "—"} @ {info.gitCommit ?? "—"}
+            {info.gitClean ? " · limpio" : " · cambios pendientes"}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-muted-foreground">Versión</dt>
+          <dd>{info.version}</dd>
+        </div>
+        <div>
+          <dt className="text-muted-foreground">Túnel</dt>
+          <dd className="font-mono text-primary">{info.tunnelUrl}</dd>
+        </div>
+        <div className="sm:col-span-2">
+          <dt className="text-muted-foreground">Actualizado</dt>
+          <dd className="font-mono text-muted-foreground">{info.updatedAt}</dd>
+        </div>
+      </dl>
+    </div>
+  );
+}
+
 export function StudioHubDashboard() {
   const navigate = useNavigate();
   const links = getHubLinks();
+  const authenticated = useRequireStudioAuth();
+  const [projectInfo, setProjectInfo] = useState<TunnelProjectInfo | null>(null);
 
   useEffect(() => {
-    if (!getStudioHubSession()) {
-      navigate("/studio/login", { replace: true });
-    }
-  }, [navigate]);
+    fetchTunnelProjectInfo().then(setProjectInfo);
+  }, []);
 
-  if (!getStudioHubSession()) {
-    return null;
-  }
+  if (!authenticated) return null;
 
   const handleLogout = () => {
     clearStudioHubSession();
     navigate("/studio/login", { replace: true });
   };
+
+  const appDisabled = links.isVercelProduction;
+  const appWarning = appDisabled
+    ? `Usa el túnel: ${links.tunnelPublicUrl}`
+    : undefined;
 
   return (
     <StudioShell>
@@ -197,7 +253,9 @@ export function StudioHubDashboard() {
             </div>
             <div>
               <h1 className="font-display text-xl font-bold">LogiTrainer Studio</h1>
-              <p className="text-xs text-muted-foreground">Panel de acceso</p>
+              <p className="text-xs text-muted-foreground">
+                {links.isTunnel ? "Panel · túnel Cloudflare" : "Panel de acceso unificado"}
+              </p>
             </div>
           </div>
           <button
@@ -214,34 +272,40 @@ export function StudioHubDashboard() {
 
         <div className="grid gap-4 sm:grid-cols-2">
           <HubLinkCard
-            title="Producción"
-            description="App principal en Vercel — guion, assets, timeline y APIs."
-            href={links.isLocal ? links.production : "/"}
-            icon={Globe}
-            external={links.isLocal}
+            title="App principal"
+            description="Studio local vía túnel o localhost — guion, timeline, APIs Gemini."
+            href={links.appPrincipal}
+            icon={Server}
+            disabled={appDisabled}
+            warning={appWarning}
           />
           <HubLinkCard
             title="Demo promocional"
-            description="Video generado con IA (guion, imágenes, voz) y escenas."
+            description="Video IA: guion, imágenes y voz LogiTrainer."
             href={links.demo}
             icon={MonitorPlay}
-            external={!links.isLocal}
-            disabled={!links.isLocal}
-            warning={links.isLocal ? undefined : "Solo en local: npm start → /demo"}
           />
           <HubLinkCard
-            title="App local"
-            description="Entorno de desarrollo en tu máquina (Vite puerto 8080)."
-            href={links.localApp}
-            icon={Laptop}
-            external={!links.isLocal}
-            disabled={!links.isLocal}
-            warning={links.isLocal ? undefined : "Ejecuta: npm start en logitrainerstudio"}
+            title="Producción (Vercel)"
+            description="Despliegue público en Vercel — misma app, sin túnel."
+            href={links.production}
+            icon={Globe}
+            external
           />
+          {links.isTunnel && (
+            <HubLinkCard
+              title="Túnel Cloudflare"
+              description="URL pública de este entorno (compartir con el equipo)."
+              href={links.tunnelPublicUrl + "/studio"}
+              icon={Cloud}
+              external
+            />
+          )}
+          <ProjectInfoPanel info={projectInfo} />
         </div>
 
         <p className="mt-10 text-center text-[10px] font-mono text-muted-foreground/50">
-          Back-office Supabase: inicia sesión en /auth tras abrir la app.
+          Back-office Supabase: inicia sesión en /auth tras abrir la app principal.
         </p>
       </div>
     </StudioShell>

@@ -43,6 +43,8 @@ export default defineConfig(({ mode }) => {
     "import.meta.env.VITE_SUPABASE_PROJECT_ID": JSON.stringify(
       env.VITE_SUPABASE_PROJECT_ID || DEFAULT_SUPABASE_PROJECT_ID,
     ),
+    "import.meta.env.VITE_TUNNEL_HOST": JSON.stringify(env.VITE_TUNNEL_HOST || ""),
+    "import.meta.env.VITE_TUNNEL_PUBLIC_URL": JSON.stringify(env.VITE_TUNNEL_PUBLIC_URL || ""),
   },
   server: {
     host: "::",

@@ -28,6 +28,7 @@ dist-ssr
 
 # Demo: regenerar con npm run demo:generate (assets versionados para deploy)
 public/demo/logitrainer/concat.txt
+public/tunnel-info.json
 
 # Supabase CLI temp (no commitear)
 supabase/.temp/

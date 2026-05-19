@@ -1,0 +1,17 @@
+# Copia a config.yml y sustituye TUNNEL_ID por el UUID de tu túnel.
+# Genera credenciales con: scripts\setup-tunnel.ps1
+#
+# tunnel: logitrainer-studio
+# credentials-file: C:\proyectos\logitrainerstudio\.cloudflared\TUNNEL_ID.json
+
+tunnel: logitrainer-studio
+credentials-file: .cloudflared\REPLACE_TUNNEL_UUID.json
+
+ingress:
+  # Dominio principal del Studio (ajusta en Cloudflare DNS)
+  - hostname: studio.logitrainerstudio.com
+    service: http://localhost:8080
+  # Alternativa opcional
+  - hostname: tunel.logitrainerstudio.com
+    service: http://localhost:8080
+  - service: http_status:404
