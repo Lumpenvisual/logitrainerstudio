@@ -26,16 +26,38 @@ Expone tu entorno local (`localhost:8080`) en Internet con un dominio fijo y acc
 
 ## Instalación rápida (Windows)
 
+### Opción A — Comandos Cloudflare (manual)
+
+PowerShell (Admin solo para `winget install`):
+
+```powershell
+# 1) Instalar cloudflared
+winget install --id Cloudflare.cloudflared
+
+# 2) Login (abre el navegador — elige logitrainerstudio.com)
+cloudflared tunnel login
+
+# 3) Crear túnel
+cloudflared tunnel create logitrainer-studio
+
+# 4) DNS público (subdominio)
+cloudflared tunnel route dns logitrainer-studio studio.logitrainerstudio.com
+
+# 5) App local en otra terminal
+cd C:\proyectos\logitrainerstudio
+npm start
+
+# 6) Iniciar túnel (usa config del proyecto)
+cloudflared tunnel --config .cloudflared\config.yml run logitrainer-studio
+```
+
+Tras el paso 3, ejecuta **una vez** `scripts\tunnel-cloudflare-cli.ps1` o `npm run tunnel:setup` para generar `.cloudflared\config.yml` (ingress → `localhost:8080`).
+
+### Opción B — Script automático
+
 ```bat
 cd C:\proyectos\logitrainerstudio
-
-REM 1) Instalar cloudflared
-scripts\install-cloudflared.bat
-
-REM 2) Configurar túnel (abre navegador para login Cloudflare)
-scripts\setup-tunnel.ps1
-
-REM 3) Iniciar app + túnel
+scripts\tunnel-cloudflare-cli.bat
 npm run tunnel:platform
 ```
 

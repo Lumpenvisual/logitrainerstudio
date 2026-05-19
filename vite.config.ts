@@ -49,6 +49,12 @@ export default defineConfig(({ mode }) => {
   server: {
     host: "::",
     port: 8080,
+    allowedHosts: [
+      "localhost",
+      ".trycloudflare.com",
+      "studio.logitrainerstudio.com",
+      "tunel.logitrainerstudio.com",
+    ],
     hmr: {
       overlay: false,
     },
