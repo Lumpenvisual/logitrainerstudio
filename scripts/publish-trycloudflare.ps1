@@ -93,9 +93,9 @@ if (-not $SkipTask) {
     $actionWatch = New-ScheduledTaskAction -Execute "powershell.exe" `
       -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$WatchdogScript`"" `
       -WorkingDirectory $ProjectRoot
-    $triggerWatch = New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (New-TimeSpan -Minutes 5) -RepetitionDuration ([TimeSpan]::MaxValue)
+    $triggerWatch = New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (New-TimeSpan -Minutes 5) -RepetitionDuration (New-TimeSpan -Days 3650)
     Register-ScheduledTask -TaskName $TaskWatchdog -Action $actionWatch -Trigger $triggerWatch `
-      -Settings $settings -RunLevel Highest -Force | Out-Null
+      -Settings $settings -RunLevel Limited -Force | Out-Null
 
     Start-ScheduledTask -TaskName $TaskStack -ErrorAction SilentlyContinue
     Write-Host "Tareas persistentes: $TaskStack, $TaskWatchdog (cada 5 min)" -ForegroundColor Green
