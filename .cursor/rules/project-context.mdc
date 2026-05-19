@@ -9,7 +9,7 @@ alwaysApply: true
 
 - **Código canónico:** `c:\proyectos\logitrainerstudio`
 - **GitHub:** https://github.com/Lumpenvisual/logitrainerstudio
-- **No confundir** con `c:\proyectos\logitrainer_app` (plantilla vacía, sin relación)
+- **Memoria humana:** `PROJECT-MEMORY.md` | **Auditoría:** `AUDIT-REPORT.md`
 
 ## Despliegue
 
@@ -17,40 +17,44 @@ alwaysApply: true
 - **Deploy:** `npx vercel deploy --prod --yes`
 - **SPA:** `vercel.json` rewrites a `index.html`
 
+## Acceso unificado `/studio`
+
+- Contraseña: `LTS-Mayo2026-7kQ!` — `src/lib/studioHub.ts`, localStorage `lts_studio_hub_session`
+- Rutas: `/studio`, `/studio/login`, `/studio/dashboard`
+- `SiteAccessGuard` redirige a `/studio/login` si no hay sesión
+- Código: `StudioHub.tsx`, `useStudioAuth.ts`, `TunnelRootRedirect.tsx` (trycloudflare → `/studio`)
+
+## Túnel localhost:8080
+
+- Quick Tunnel: `npm run publish:trycloudflare` | URL: `TRYCLOUDFLARE-URL.txt`
+- Persistencia: `LogiTrainerStudio-TunnelStack`, `LogiTrainerStudio-TunnelWatchdog`
+- Docs: `docs/CLOUDFLARE-TUNNEL.md`
+
 ## Supabase (propietario)
 
 - **Project ref:** `zghzhfheyawvbdddsybe`
-- **Secrets:** `GEMINI_API_KEY` (Google AI Studio — no en repo)
-- **Migraciones:** `echo y | npx supabase db push`
+- **Secrets:** `GEMINI_API_KEY` (no en repo)
 - **Functions:** `npx supabase functions deploy <name> --project-ref zghzhfheyawvbdddsybe`
 
 ## IA
 
-- Provider: **Google Gemini** nativo (`supabase/functions/_shared/gemini.ts`)
-- Cliente: `src/services/aiService.ts` + `src/lib/edgeClient.ts` (no `functions.invoke`)
-- Smoke: `npm run test:ai-apis` | E2E UI: `npm run test:e2e` | Todo: `npm run verify:prod`
+- Gemini nativo: `supabase/functions/_shared/gemini.ts`
+- Cliente: `aiService.ts` + `edgeClient.ts`
+- Smoke: `npm run test:ai-apis` | E2E: `npm run verify:prod` (10) | Túnel: `npm run tunnel:verify` (4)
 
-## Auth y acceso
+## Auth back-office
 
-- Site gate RPC + password en env
-- Back-office: `backoffice@logitrainerstudio.app` — admin vía `back_office_config` + `admin-approve-user`
-- Redirect URLs en Supabase: producción + `localhost:8080` / `8081`
+- `backoffice@logitrainerstudio.app` / `LTS-BackOffice-2026!mX`
+- Tras hub: `/auth` — `passSiteGate()` en `tests/e2e/helpers/studio.ts`
 
-## E2E helpers
+## Demo
 
-- `skipOnboarding()` → `lt-onboarding-complete`
-- `enterWorkspaceFromWelcome()` → proyecto reciente o New Project → Create & Enter
+- `/demo` público — `public/demo/logitrainer/` — `npm run demo:generate`
 
-## Demo público
+## Verificado (2026-05-19)
 
-- `/demo` sin site gate — video + escenas en `public/demo/logitrainer/`
-- `npm run demo:generate` | Skill: `lts-demo`
+- `npm run audit:lts` + `verify:prod` 10/10 + `tunnel:verify` 4/4
 
-## Verificado
+## Skills
 
-- `npm run verify:prod` — secrets + 7 APIs + 8 Playwright (incl. `/demo`)
-- Producción: https://logitrainerstudio.vercel.app
-
-## Skills Cursor
-
-`lts-supabase-backend`, `lts-edge-client`, `lts-gemini-api`, `lts-e2e-verification`, `lts-demo` — regla `lts-backend.mdc`
+`lts-supabase-backend`, `lts-edge-client`, `lts-gemini-api`, `lts-e2e-verification`, `lts-demo`, `lts-studio-hub`

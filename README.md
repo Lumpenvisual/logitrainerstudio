@@ -9,7 +9,10 @@ Plataforma de producción audiovisual con IA (Vite + React + Supabase + Gemini).
 | Producción | https://logitrainerstudio.vercel.app |
 | Acceso unificado | `/studio` (login + dashboard) |
 | Demo | `/demo` |
-| Túnel Cloudflare | https://studio.logitrainerstudio.com/studio |
+| Túnel local | `TRYCLOUDFLARE-URL.txt` (`npm run publish:trycloudflare`) |
+| Túnel dominio fijo | https://studio.logitrainerstudio.com/studio (requiere setup CF) |
+
+**Memoria del proyecto:** [PROJECT-MEMORY.md](PROJECT-MEMORY.md) | **Auditoría:** [AUDIT-REPORT.md](AUDIT-REPORT.md)
 
 **Contraseña hub:** `LTS-Mayo2026-7kQ!`
 

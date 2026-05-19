@@ -33,6 +33,7 @@ Helpers: `tests/e2e/helpers/studio.ts` — `skipOnboarding()` sets `lt-onboardin
 ## Env (optional)
 
 - `PLAYWRIGHT_BASE_URL` — default `https://logitrainerstudio.vercel.app`
+- Túnel: `npm run tunnel:verify` (lee `.cloudflared/quick-tunnel-url.txt`)
 - `STUDIO_ACCESS_PASSWORD` — default `LTS-Mayo2026-7kQ!`
 - `BACK_OFFICE_EMAIL` / `BACK_OFFICE_PASSWORD` — admin test user
 

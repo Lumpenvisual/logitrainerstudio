@@ -11,13 +11,17 @@ npm run dev
 ```
 
 **Producción:** https://logitrainerstudio.vercel.app  
-**Supabase:** `zghzhfheyawvbdddsybe` (no usar Lovable `bcobgfxepxmmcheuliai`)
+**Login unificado:** `/studio` — contraseña `LTS-Mayo2026-7kQ!`  
+**Túnel local:** `npm run publish:trycloudflare` → `TRYCLOUDFLARE-URL.txt`  
+**Supabase:** `zghzhfheyawvbdddsybe` (no usar Lovable `bcobgfxepxmmcheuliai`)  
+**Memoria:** `PROJECT-MEMORY.md` | **Auditoría:** `AUDIT-REPORT.md`
 
 ## Verificación obligatoria tras cambios de backend/IA
 
 ```powershell
 npm run audit:lts      # secrets + APIs + build
-npm run verify:prod    # audit + Playwright producción
+npm run verify:prod    # audit + Playwright producción (10 tests)
+npm run tunnel:verify  # E2E vía túnel trycloudflare (4 tests)
 npm run demo:generate  # video demo LogiTrainer → public/demo/logitrainer/
 ```
 
@@ -56,7 +60,7 @@ Todas pasan por `aiService.ts` → `callEdge` / `fetchEdgeStream`:
 
 | Uso | Valor |
 |-----|--------|
-| Site gate | `LTS-Mayo2026-7kQ!` (env `STUDIO_ACCESS_PASSWORD`) |
+| Hub `/studio` | `LTS-Mayo2026-7kQ!` (env `STUDIO_ACCESS_PASSWORD`) |
 | Back-office | `backoffice@logitrainerstudio.app` / `LTS-BackOffice-2026!mX` |
 | Seed admin | `npm run seed:back-office` |
 
@@ -67,6 +71,7 @@ Todas pasan por `aiService.ts` → `callEdge` / `fetchEdgeStream`:
 - `lts-gemini-api` — `GEMINI_API_KEY` solo en Secrets
 - `lts-e2e-verification` — `verify:prod`, Playwright
 - `lts-demo` — video promo, `/demo`, `demo:generate`
+- `lts-studio-hub` — `/studio`, túnel, `publish:trycloudflare`
 
 Reglas: `.cursor/rules/project-context.mdc`, `lts-backend.mdc`
 
