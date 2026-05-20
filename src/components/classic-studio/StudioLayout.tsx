@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Film, Globe, Save, FolderOpen, User, LogOut, Undo2, Redo2, FilePlus2, Command, Shield, Search, Sparkles,
   LayoutDashboard, Clapperboard, Play, Images, Download, BookOpen, Layout, Megaphone, Presentation, Calendar, Mail, Activity, Server, Info, Menu, X, MoreHorizontal, Gift, MessageCircle, Target, Video, Gem, MonitorPlay, Magnet, Archive
 } from 'lucide-react';
@@ -216,6 +217,14 @@ export default function StudioLayout({ activeTab, onTabChange, children, scenes,
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
+
+            <Link
+              to="/"
+              className="hidden sm:inline-flex items-center gap-1 rounded-md border border-border/30 px-2 py-1 text-[10px] font-semibold text-muted-foreground transition-colors hover:border-primary/30 hover:text-primary"
+            >
+              <Sparkles className="h-3 w-3" />
+              Studio Pro
+            </Link>
 
             <ThemeToggle />
 

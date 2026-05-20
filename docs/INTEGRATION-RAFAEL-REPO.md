@@ -32,6 +32,13 @@ Todo vive en **`C:\proyectos\logitrainerstudio`**. El repo clonado era una varia
 - Edge functions Gemini (`ai-generate-script`, `ai-chat`, etc.)
 - Studio Pro en `/` con Zustand y paneles actuales
 
+## Code splitting (Studio Pro)
+
+- `/classic` carga con `React.lazy` + `Suspense` (chunk `classic-studio` ~1.9 MB).
+- Bundle inicial de Studio Pro ~465 KB (sin clásico).
+- `videoRenderer` en chunk `video-renderer` (export desde Studio Pro).
+- Navegación: sidebar Studio Pro → icono cuadrícula → `/classic`; header clásico → **Studio Pro** → `/`.
+
 ## Desarrollo
 
 ```bash

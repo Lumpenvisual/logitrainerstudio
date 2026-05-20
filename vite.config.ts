@@ -65,5 +65,19 @@ export default defineConfig(({ mode }) => {
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes("src/components/classic-studio/") || id.includes("src/pages/ClassicStudio")) {
+            return "classic-studio";
+          }
+          if (id.includes("src/lib/videoRenderer")) {
+            return "video-renderer";
+          }
+        },
+      },
+    },
+  },
 };
 });
