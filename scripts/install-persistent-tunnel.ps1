@@ -127,27 +127,23 @@ Start-Service cloudflared
 Set-Service cloudflared -StartupType Automatic
 Write-Host "Servicio cloudflared: Running + Automatic" -ForegroundColor Green
 
-# --- Tarea programada: npm start al iniciar sesión ---
+# --- Tarea programada: Vite al iniciar sesión (sin ventana cmd) ---
 if (-not $SkipViteTask) {
+  . (Join-Path $ProjectRoot "scripts\tunnel-helpers.ps1")
   $taskName = "LogiTrainerStudio-Vite"
-  $npm = (Get-Command npm.cmd -ErrorAction SilentlyContinue).Source
-  if (-not $npm) { $npm = (Get-Command npm -ErrorAction SilentlyContinue).Source }
-  if (-not $npm) { Write-Warning "npm no encontrado en PATH; crea la tarea manualmente." }
-  else {
-    Unregister-ScheduledTask -TaskName $taskName -Confirm:$false -ErrorAction SilentlyContinue
-    $action = New-ScheduledTaskAction -Execute $npm -Argument "start" -WorkingDirectory $ProjectRoot
-    $trigger = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
-    $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable
-    Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Settings $settings -RunLevel Limited -Force | Out-Null
-    Start-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
-    Write-Host "Tarea $taskName registrada (npm start al iniciar sesión)." -ForegroundColor Green
-  }
+  $viteScript = Join-Path $ProjectRoot "scripts\start-vite-only.ps1"
+  $action = New-LtsHiddenTaskAction -ProjectRoot $ProjectRoot -ScriptPath $viteScript
+  $trigger = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
+  $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable
+  Register-LtsHiddenScheduledTask -TaskName $taskName -Action $action -Trigger @($trigger) -RunLevel Limited -Settings $settings
+  Start-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
+  Write-Host "Tarea $taskName registrada (Vite oculto al iniciar sesión)." -ForegroundColor Green
 }
 
 # --- Arrancar Vite ahora si no está en 8080 ---
 if (-not (Get-NetTCPConnection -LocalPort 8080 -ErrorAction SilentlyContinue)) {
-  Start-Process $npm -ArgumentList "start" -WorkingDirectory $ProjectRoot -WindowStyle Hidden
-  Write-Host "Iniciando npm start..." -ForegroundColor Cyan
+  & (Join-Path $ProjectRoot "scripts\start-vite-only.ps1")
+  Write-Host "Iniciando Vite (sin ventana)..." -ForegroundColor Cyan
   Start-Sleep -Seconds 8
 }
 

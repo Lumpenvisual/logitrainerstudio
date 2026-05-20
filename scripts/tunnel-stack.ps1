@@ -16,6 +16,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 $ProjectRoot = "C:\proyectos\logitrainerstudio"
+. (Join-Path $PSScriptRoot "tunnel-helpers.ps1")
 $CloudflaredDir = Join-Path $ProjectRoot ".cloudflared"
 $PidFile = Join-Path $CloudflaredDir "stack.pids.json"
 $UrlFile = Join-Path $CloudflaredDir "quick-tunnel-url.txt"
@@ -66,11 +67,7 @@ function Start-Vite {
     Write-Host "Vite ya en :8080" -ForegroundColor Yellow
     return $null
   }
-  $npm = (Get-Command npm.cmd -ErrorAction SilentlyContinue).Source
-  if (-not $npm) { $npm = (Get-Command npm -ErrorAction SilentlyContinue).Source }
-  if (-not $npm) { throw "npm no encontrado" }
-  $p = Start-Process -FilePath $npm -ArgumentList "start" -WorkingDirectory $ProjectRoot `
-    -WindowStyle Hidden -PassThru
+  $p = Start-LtsViteHidden -ProjectRoot $ProjectRoot
   if (-not (Wait-Port 8080 90)) { throw "Vite no arrancó en :8080" }
   Write-Host "Vite PID $($p.Id)" -ForegroundColor Green
   return $p.Id
@@ -85,15 +82,15 @@ function Get-QuickTunnelUrl {
 
 function Start-TunnelNamed {
   if (-not (Test-Path $ConfigFile)) { return $null }
-  $p = Start-Process -FilePath "cloudflared" -ArgumentList "tunnel", "--config", $ConfigFile, "run" `
-    -WorkingDirectory $ProjectRoot -WindowStyle Hidden -PassThru
+  $p = Start-LtsProcessNoWindow -FilePath "cloudflared" -ArgumentList @("tunnel", "--config", $ConfigFile, "run") `
+    -WorkingDirectory $ProjectRoot
   Start-Sleep -Seconds 5
   return @{ pid = $p.Id; url = "https://studio.logitrainerstudio.com" }
 }
 
 function Start-TunnelToken([string]$Token) {
-  $p = Start-Process -FilePath "cloudflared" -ArgumentList "tunnel", "run", "--token", $Token `
-    -WorkingDirectory $ProjectRoot -WindowStyle Hidden -PassThru
+  $p = Start-LtsProcessNoWindow -FilePath "cloudflared" -ArgumentList @("tunnel", "run", "--token", $Token) `
+    -WorkingDirectory $ProjectRoot
   Start-Sleep -Seconds 8
   $host = if ($env:CLOUDFLARE_TUNNEL_HOST) { $env:CLOUDFLARE_TUNNEL_HOST } else { "studio.logitrainerstudio.com" }
   return @{ pid = $p.Id; url = "https://$host" }
@@ -101,8 +98,7 @@ function Start-TunnelToken([string]$Token) {
 
 function Start-TunnelQuick {
   Remove-Item $LogFile -Force -ErrorAction SilentlyContinue
-  $p = Start-Process -FilePath "cloudflared" -ArgumentList "tunnel", "--url", "http://localhost:8080" `
-    -RedirectStandardError $LogFile -WorkingDirectory $ProjectRoot -WindowStyle Hidden -PassThru
+  $p = Start-LtsCloudflaredQuickHidden -LogFile $LogFile -WorkingDirectory $ProjectRoot
   foreach ($i in 1..45) {
     Start-Sleep -Seconds 1
     $url = Get-QuickTunnelUrl

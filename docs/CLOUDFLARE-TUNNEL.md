@@ -184,6 +184,7 @@ src/lib/studioHub.ts      # Sesión + detección túnel
 | Error 502 en el túnel | Comprueba que `npm start` escucha en **8080** |
 | DNS no resuelve | En Cloudflare DNS, CNAME `studio` → `<id>.cfargotunnel.com` (proxy ON) |
 | Login ok pero app bloqueada | Misma contraseña activa `localStorage`; prueba ventana privada |
+| Ventana negra vacía (System32) | Tarea `LogiTrainerStudio-TunnelStack` abría PowerShell visible. **Solución:** doble clic en `scripts\disable-local-tunnel-admin.bat` (acepta UAC) o `npm run tunnel:disable:admin`. Luego `npm run tunnel:silence` si quieres túnel sin ventanas. |
 | `config.yml` no existe | Ejecuta `npm run tunnel:setup` de nuevo |
 
 ---

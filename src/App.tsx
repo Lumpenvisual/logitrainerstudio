@@ -17,6 +17,8 @@ import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import Profile from "./pages/Profile";
+import ClassicStudio from "./pages/ClassicStudio";
+import { LanguageProvider } from "@/i18n/LanguageContext";
 
 const queryClient = new QueryClient();
 
@@ -42,6 +44,14 @@ const App = () => (
                   <Route path="/reset-password" element={<ResetPassword />} />
                   <Route path="/profile" element={<Profile />} />
                   <Route path="/about" element={<About />} />
+                  <Route
+                    path="/classic"
+                    element={
+                      <LanguageProvider>
+                        <ClassicStudio />
+                      </LanguageProvider>
+                    }
+                  />
                   <Route path="*" element={<NotFound />} />
                 </Route>
               </Routes>

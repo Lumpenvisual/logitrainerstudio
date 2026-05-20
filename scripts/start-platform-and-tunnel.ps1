@@ -4,17 +4,13 @@ $ErrorActionPreference = "Stop"
 $ProjectRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 Set-Location $ProjectRoot
 
-$viteJob = Start-Job -ScriptBlock {
-  Set-Location $using:ProjectRoot
-  npm run start 2>&1
-}
-
+. (Join-Path $PSScriptRoot "tunnel-helpers.ps1")
+$vite = Start-LtsViteHidden -ProjectRoot $ProjectRoot.Path
+Write-Host "Vite en segundo plano (PID $($vite.Id), sin ventana cmd)." -ForegroundColor Cyan
 Start-Sleep -Seconds 4
-Write-Host "Vite en background (job $($viteJob.Id)). Logs: Receive-Job -Id $($viteJob.Id)" -ForegroundColor Cyan
 
 try {
   & (Join-Path $PSScriptRoot "start-tunnel.ps1")
 } finally {
-  Stop-Job $viteJob -ErrorAction SilentlyContinue
-  Remove-Job $viteJob -Force -ErrorAction SilentlyContinue
+  Stop-Process -Id $vite.Id -Force -ErrorAction SilentlyContinue
 }

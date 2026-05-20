@@ -81,24 +81,20 @@ if (-not $SkipTask) {
   if (-not $isAdmin) {
     Write-Host "`nRe-ejecuta como Administrador para instalar persistencia automática." -ForegroundColor Yellow
   } else {
-    foreach ($t in @($TaskStack, $TaskWatchdog)) {
-      Unregister-ScheduledTask -TaskName $t -Confirm:$false -ErrorAction SilentlyContinue
-    }
-    $actionStart = New-ScheduledTaskAction -Execute "powershell.exe" `
-      -Argument "-NoProfile -ExecutionPolicy Bypass -Command `"`$env:LTS_TUNNEL_MODE='quick'; & '$StackScript' -Action start`"" `
-      -WorkingDirectory $ProjectRoot
-    $triggerLogon = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
+    . (Join-Path $ProjectRoot "scripts\tunnel-helpers.ps1")
+    $stackStartScript = Join-Path $ProjectRoot "scripts\tunnel-stack-start.ps1"
     $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `
       -StartWhenAvailable -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1)
-    Register-ScheduledTask -TaskName $TaskStack -Action $actionStart -Trigger $triggerLogon `
-      -Settings $settings -RunLevel Highest -Force | Out-Null
+    $actionStart = New-LtsHiddenTaskAction -ProjectRoot $ProjectRoot -ScriptPath $stackStartScript
+    $triggerLogon = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
+    Register-LtsHiddenScheduledTask -TaskName $TaskStack -Action $actionStart -Trigger @($triggerLogon) `
+      -RunLevel Limited -Settings $settings
 
-    $actionWatch = New-ScheduledTaskAction -Execute "powershell.exe" `
-      -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$WatchdogScript`"" `
-      -WorkingDirectory $ProjectRoot
-    $triggerWatch = New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (New-TimeSpan -Minutes 5) -RepetitionDuration (New-TimeSpan -Days 3650)
-    Register-ScheduledTask -TaskName $TaskWatchdog -Action $actionWatch -Trigger $triggerWatch `
-      -Settings $settings -RunLevel Limited -Force | Out-Null
+    $actionWatch = New-LtsHiddenTaskAction -ProjectRoot $ProjectRoot -ScriptPath $WatchdogScript
+    $triggerWatch = New-ScheduledTaskTrigger -Once -At (Get-Date) `
+      -RepetitionInterval (New-TimeSpan -Minutes 5) -RepetitionDuration (New-TimeSpan -Days 3650)
+    Register-LtsHiddenScheduledTask -TaskName $TaskWatchdog -Action $actionWatch -Trigger @($triggerWatch) `
+      -RunLevel Limited -Settings $settings
 
     Start-ScheduledTask -TaskName $TaskStack -ErrorAction SilentlyContinue
     Write-Host "Tareas persistentes: $TaskStack, $TaskWatchdog (cada 5 min)" -ForegroundColor Green

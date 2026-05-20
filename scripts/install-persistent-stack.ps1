@@ -20,14 +20,14 @@ if ((Test-Path $CertPath) -and (Test-Path $ConfigPath)) {
 Write-Host "Instalando tarea persistente (quick/named stack)..." -ForegroundColor Cyan
 Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false -ErrorAction SilentlyContinue
 
-$action = New-ScheduledTaskAction -Execute "powershell.exe" `
-  -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$ScriptPath`" -Action start" `
-  -WorkingDirectory $ProjectRoot
+. (Join-Path $ProjectRoot "scripts\tunnel-helpers.ps1")
+$stackStartScript = Join-Path $ProjectRoot "scripts\tunnel-stack-start.ps1"
+$action = New-LtsHiddenTaskAction -ProjectRoot $ProjectRoot -ScriptPath $stackStartScript
 $trigger = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
 $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `
   -StartWhenAvailable -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1)
-Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -Settings $settings `
-  -RunLevel Highest -Force | Out-Null
+Register-LtsHiddenScheduledTask -TaskName $TaskName -Action $action -Trigger @($trigger) `
+  -RunLevel Limited -Settings $settings
 
 Start-ScheduledTask -TaskName $TaskName
 Write-Host "Tarea '$TaskName' registrada y arrancada." -ForegroundColor Green

@@ -1,7 +1,8 @@
 #Requires -Version 5.1
 # Túnel rápido trycloudflare.com (sin login Cloudflare) — pruebas locales.
 $ErrorActionPreference = "Stop"
-$ProjectRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
+$ProjectRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+. (Join-Path $PSScriptRoot "tunnel-helpers.ps1")
 $LogFile = Join-Path $ProjectRoot ".cloudflared\quick-tunnel-url.txt"
 
 function Refresh-Path {
@@ -18,9 +19,8 @@ New-Item -ItemType Directory -Force -Path (Join-Path $ProjectRoot ".cloudflared"
 Write-Host "Iniciando quick tunnel -> http://localhost:8080" -ForegroundColor Cyan
 Write-Host "La URL aparecerá en unos segundos...`n" -ForegroundColor Yellow
 
-$proc = Start-Process -FilePath "cloudflared" -ArgumentList "tunnel", "--url", "http://localhost:8080" `
-  -RedirectStandardError (Join-Path $ProjectRoot ".cloudflared\quick-tunnel.log") `
-  -PassThru -NoNewWindow
+$logPath = Join-Path $ProjectRoot ".cloudflared\quick-tunnel.log"
+$proc = Start-LtsCloudflaredQuickHidden -LogFile $logPath -WorkingDirectory $ProjectRoot
 
 Start-Sleep -Seconds 12
 $log = Get-Content (Join-Path $ProjectRoot ".cloudflared\quick-tunnel.log") -Raw -ErrorAction SilentlyContinue
@@ -34,4 +34,4 @@ if ($log -match "(https://[a-z0-9-]+\.trycloudflare\.com)") {
   Write-Host "Revisa .cloudflared\quick-tunnel.log" -ForegroundColor Yellow
 }
 
-Wait-Process $proc.Id
+Write-Host "cloudflared PID $($proc.Id) (segundo plano, sin ventana)." -ForegroundColor Cyan

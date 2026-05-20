@@ -273,9 +273,17 @@ export function StudioHubDashboard() {
         <div className="grid gap-4 sm:grid-cols-2">
           <HubLinkCard
             title="App principal"
-            description="Studio local vía túnel o localhost — guion, timeline, APIs Gemini."
+            description="Studio Pro — guion, timeline, APIs Gemini, marketing integrado."
             href={links.appPrincipal}
             icon={Server}
+            disabled={appDisabled}
+            warning={appWarning}
+          />
+          <HubLinkCard
+            title="Studio clásico"
+            description="UI completa del repo Lovable: editor DnD, funnels, ebooks, export canvas."
+            href={links.classicStudio}
+            icon={FolderGit2}
             disabled={appDisabled}
             warning={appWarning}
           />
