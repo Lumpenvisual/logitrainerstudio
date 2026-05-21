@@ -25,7 +25,6 @@
     "tunnel:disable:admin": "scripts\\disable-local-tunnel-admin.bat",
     "publish:trycloudflare": "powershell -WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -File scripts/publish-trycloudflare.ps1",
     "test:e2e:tunnel": "node scripts/e2e-tunnel.mjs",
-    "test:e2e:tunnel:quick": "node scripts/e2e-tunnel.mjs",
     "tunnel:start": "powershell -WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -File scripts/start-tunnel.ps1",
     "tunnel:stop": "powershell -WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -File scripts/stop-tunnel.ps1",
     "tunnel:platform": "powershell -WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -File scripts/start-platform-and-tunnel.ps1",

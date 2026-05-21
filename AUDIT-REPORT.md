@@ -1,7 +1,7 @@
 # Auditoría profunda — LogiTrainer Studio
 
-**Fecha:** 2026-05-19  
-**Commit verificado:** `main` (post tunnel + studio hub)  
+**Fecha:** 2026-05-21  
+**Commit:** `main` (integración Rafael + Studio clásico + fixes auth/E2E)  
 **Producción:** https://logitrainerstudio.vercel.app
 
 ---
@@ -13,13 +13,12 @@
 | Secretos en repo | ✅ PASS |
 | APIs Gemini (7 edges) | ✅ PASS |
 | Build producción | ✅ PASS |
-| E2E Playwright (Vercel) | ✅ **10/10** |
-| E2E túnel trycloudflare | ✅ **4/4** |
+| E2E Playwright (Vercel) | ✅ **13/13** |
 | Vitest | ✅ 1/1 |
-| Túnel local :8080 | ✅ Activo (ver `TRYCLOUDFLARE-URL.txt`) |
-| ESLint | ⚠️ Deuda técnica (no bloquea deploy) |
+| Código obsoleto | ✅ Eliminados `basic.spec.ts`, `local-llm.spec.ts`, script duplicado `test:e2e:tunnel:quick` |
+| Fixes aplicados | ✅ Race `useAuth`, redirect `/auth` → `/classic`, E2E por chunk lazy |
 
-**Veredicto: operativo en producción y túnel local.**
+**Veredicto: operativo en producción.**
 
 ---
 
@@ -27,22 +26,27 @@
 
 ```
 npm run audit:lts      → secrets + 7 APIs + build OK
-npm run verify:prod    → 10/10 Playwright @ logitrainerstudio.vercel.app
-npm run tunnel:verify  → 4/4 Playwright @ trycloudflare (localhost:8080)
+npm run verify:prod    → 13/13 Playwright @ logitrainerstudio.vercel.app
+npm test               → 1/1 Vitest
 ```
 
-### E2E producción (10)
+### E2E producción (13)
 
-- Studio hub: login, logout, dashboard
-- Site access gate ×2
-- Demo page ×2
-- Full flow: studio → auth → workspace + API health
-- Back-office admin
-- Gemini AI script generation
+- Studio hub (2), site access (2), demo (2), full flow (2)
+- Back-office, Gemini AI script
+- Classic studio: chunk lazy + hub link (2)
+- Studio Pro export panel (1)
 
-### E2E túnel (4)
+### Limpieza
 
-- Mismo flujo hub + site access vía URL pública trycloudflare
+- Tests E2E huérfanos del repo Rafael (`basic`, `local-llm`) — apuntaban a UI antigua en `/`
+- `package.json`: eliminado script duplicado `test:e2e:tunnel:quick`
+
+### Correcciones de producto
+
+- `useAuth`: no marcar `loading=false` antes de `getSession()` (evita redirect erróneo a `/auth`)
+- `Auth.tsx`: tras login vuelve a `state.from` (p. ej. `/classic`)
+- `ClassicStudio.tsx`: pasa `state.from` al redirigir a `/auth`
 
 ---
 
@@ -51,29 +55,19 @@ npm run tunnel:verify  → 4/4 Playwright @ trycloudflare (localhost:8080)
 | Entorno | URL |
 |---------|-----|
 | Producción | https://logitrainerstudio.vercel.app/studio |
+| Studio Pro | https://logitrainerstudio.vercel.app/ |
+| Studio clásico | https://logitrainerstudio.vercel.app/classic |
 | Demo | https://logitrainerstudio.vercel.app/demo |
-| Túnel local | `TRYCLOUDFLARE-URL.txt` (Quick Tunnel, URL puede cambiar al reiniciar cloudflared) |
 
 **Contraseña hub:** `LTS-Mayo2026-7kQ!`
 
 ---
 
-## Memoria del proyecto
+## Comandos de verificación
 
-- `PROJECT-MEMORY.md` — referencia rápida
-- `AGENTS.md` — agentes Cursor
-- `.cursor/rules/project-context.mdc` — regla always-on
-- `.cursor/skills/lts-*` — skills especializados
-
----
-
-## Deuda técnica
-
-1. ESLint: ~77 errores `no-explicit-any` (legacy)
-2. Bundle JS ~1.7 MB — code-split recomendado
-3. Dominio fijo túnel: pendiente `cloudflared tunnel login` o `CLOUDFLARE_TUNNEL_TOKEN`
-4. `agent-orchestrator`: skip sin fila agents en DB
-
----
-
-*Generado tras verificación completa previa a commit de memoria.*
+```powershell
+cd C:\proyectos\logitrainerstudio
+npm run audit:lts
+npm run verify:prod
+npm run tunnel:verify   # HTTP túnel + 7 E2E locales (:8080)
+```

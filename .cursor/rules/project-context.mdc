@@ -7,15 +7,25 @@ alwaysApply: true
 
 ## Ubicación y repos
 
-- **Código canónico:** `c:\proyectos\logitrainerstudio`
+- **Código canónico:** `C:\proyectos\logitrainerstudio`
 - **GitHub:** https://github.com/Lumpenvisual/logitrainerstudio
-- **Memoria humana:** `PROJECT-MEMORY.md` | **Auditoría:** `AUDIT-REPORT.md`
+- **Memoria humana:** `PROJECT-MEMORY.md` | **Auditoría:** `AUDIT-REPORT.md` | **Integración clásico:** `docs/INTEGRATION-RAFAEL-REPO.md`
+- **Git:** `main` — integración Rafael, `/classic`, fixes auth + E2E 13/13 prod
 
 ## Despliegue
 
 - **Producción:** https://logitrainerstudio.vercel.app
 - **Deploy:** `npx vercel deploy --prod --yes`
 - **SPA:** `vercel.json` rewrites a `index.html`
+
+## Rutas principales
+
+| Ruta | App |
+|------|-----|
+| `/` | Studio Pro (Zustand, timeline, `RenderExportPanel` + `videoRenderer`) |
+| `/classic` | Studio clásico Lovable (`React.lazy`, chunk `classic-studio`) |
+| `/studio` | Hub login/dashboard |
+| `/demo` | Demo pública (sin site gate) |
 
 ## Acceso unificado `/studio`
 
@@ -27,20 +37,24 @@ alwaysApply: true
 ## Túnel localhost:8080
 
 - Quick Tunnel: `npm run publish:trycloudflare` | URL: `TRYCLOUDFLARE-URL.txt`
-- Persistencia: `LogiTrainerStudio-TunnelStack`, `LogiTrainerStudio-TunnelWatchdog`
+- Verificación: `npm run tunnel:verify` (HTTP + 7 E2E en `:8080`)
+- Sin ventanas cmd: `npm run tunnel:silence` | Desactivar: `npm run tunnel:disable`
+- Helpers: `scripts/tunnel-helpers.ps1`, `tunnel-stack-start.ps1`
 - Docs: `docs/CLOUDFLARE-TUNNEL.md`
 
 ## Supabase (propietario)
 
 - **Project ref:** `zghzhfheyawvbdddsybe`
 - **Secrets:** `GEMINI_API_KEY` (no en repo)
-- **Functions:** `npx supabase functions deploy <name> --project-ref zghzhfheyawvbdddsybe`
+- **Functions:** `ai-generate-script`, `ai-generate-image`, `ai-generate-audio`, `ai-chat`, `generate-music`, etc.
+- **Deploy:** `npx supabase functions deploy <name> --project-ref zghzhfheyawvbdddsybe`
 
 ## IA
 
 - Gemini nativo: `supabase/functions/_shared/gemini.ts`
-- Cliente: `aiService.ts` + `edgeClient.ts`
-- Smoke: `npm run test:ai-apis` | E2E: `npm run verify:prod` (10) | Túnel: `npm run tunnel:verify` (4)
+- Studio Pro: `aiService.ts` + `edgeClient.ts`
+- Studio clásico: `src/services/classic/apiService.ts`
+- Smoke: `npm run test:ai-apis` | E2E prod: `npm run verify:prod` (13) | Túnel: `npm run tunnel:verify` (7)
 
 ## Auth back-office
 
@@ -51,9 +65,10 @@ alwaysApply: true
 
 - `/demo` público — `public/demo/logitrainer/` — `npm run demo:generate`
 
-## Verificado (2026-05-19)
+## Navegación entre editores
 
-- `npm run audit:lts` + `verify:prod` 10/10 + `tunnel:verify` 4/4
+- Pro → clásico: `AppSidebar` enlace `/classic`
+- Clásico → Pro: `StudioLayout` header "Studio Pro" → `/`
 
 ## Skills
 

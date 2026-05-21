@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Activity, Mail, Lock, User, ArrowRight, Loader2, Sparkles, Film, Clock, Cpu, Play, Eye, EyeOff, Star, Users, Zap, Gift, Shield, CheckCircle } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
@@ -35,6 +35,8 @@ const trustBadges = [
 ];
 
 export default function Auth() {
+  const location = useLocation();
+  const redirectTo = (location.state as { from?: string } | null)?.from || "/";
   const { user, loading, signIn, signUp, resetPassword } = useAuth();
   const [mode, setMode] = useState<AuthMode>('login');
   const [email, setEmail] = useState('');
@@ -61,7 +63,7 @@ export default function Auth() {
     );
   }
 
-  if (user) return <Navigate to="/" replace />;
+  if (user) return <Navigate to={redirectTo} replace />;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

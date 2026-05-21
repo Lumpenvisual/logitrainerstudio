@@ -3,7 +3,7 @@ import { useProject } from '@/hooks/classic/useProject';
 import { useAuth } from '@/hooks/useAuth';
 import { useApproval } from '@/hooks/useApproval';
 import { useProjects } from '@/hooks/classic/useProjects';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAutoSave, getAutoSavedProject, clearAutoSave } from '@/hooks/classic/useAutoSave';
 import { useKeyboardShortcuts } from '@/hooks/classic/useKeyboardShortcuts';
 import StudioLayout from '@/components/classic-studio/StudioLayout';
@@ -49,6 +49,7 @@ import { Loader2, Film } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 export default function ClassicStudio() {
+  const location = useLocation();
   const {
     project, activeTab, setActiveTab,
     updateMeta, setScenes, updateScene, removeScene, addScene, reorderScenes,
@@ -363,7 +364,7 @@ export default function ClassicStudio() {
   }, [t]);
 
   if (!authLoading && !user) {
-    return <Navigate to="/auth" replace />;
+    return <Navigate to="/auth" replace state={{ from: location.pathname }} />;
   }
 
   if (authLoading || approvalLoading) {

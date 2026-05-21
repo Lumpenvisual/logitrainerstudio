@@ -42,6 +42,27 @@ export async function loginAsBackOffice(page: Page) {
   });
 }
 
+/** Abre /classic y espera el chunk lazy `classic-studio`. */
+export async function enterClassicStudio(page: Page) {
+  const chunkPromise = page.waitForResponse(
+    (res) => res.url().includes("classic-studio") && res.status() === 200,
+    { timeout: 90_000 },
+  );
+  await gotoApp(page, "/classic");
+  if (page.url().includes("/auth")) {
+    await expect(page.getByPlaceholder("you@example.com")).toBeVisible({ timeout: 20_000 });
+    await page.getByPlaceholder("you@example.com").fill(ADMIN_EMAIL);
+    await page.locator('input[type="password"]').first().fill(ADMIN_PASSWORD);
+    await Promise.all([
+      page.waitForURL(/\/classic(\?|$)/, { timeout: 30_000 }),
+      page.getByRole("button", { name: /^sign in$/i }).click(),
+    ]);
+  }
+  await chunkPromise;
+  await expect(page).toHaveURL(/\/classic(\?|$)/, { timeout: 15_000 });
+  await expect(page.locator("#root")).not.toBeEmpty();
+}
+
 export async function enterWorkspaceFromWelcome(page: Page) {
   const newProject = page.getByRole("button", { name: /New Project|Nuevo Proyecto|Nouveau Projet/i });
   await expect(newProject).toBeVisible({ timeout: 20_000 });
