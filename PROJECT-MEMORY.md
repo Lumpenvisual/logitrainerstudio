@@ -1,9 +1,9 @@
 # Memoria del proyecto — LogiTrainer Studio
 
-**Última actualización:** 2026-05-19  
+**Última actualización:** 2026-05-21  
 **Repo:** https://github.com/Lumpenvisual/logitrainerstudio  
 **Carpeta local:** `C:\proyectos\logitrainerstudio`  
-**Git local:** `main` — **2 commits por delante de `origin/main`** (sin push aún)
+**Git local:** `main` — sincronizado con `origin/main` (`eae7d13`)
 
 ---
 
@@ -111,9 +111,9 @@ Ver **`docs/INTEGRATION-RAFAEL-REPO.md`**. Origen: [rafaelcastro7/logitrainer-a6
 |-------|-----------|
 | `verify:prod` | **13/13** vs Vercel |
 | `audit:lts` | OK (secrets + APIs + build) |
-| `tunnel:verify` | HTTP túnel + 7 E2E locales (`:8080`) |
+| `tunnel:verify` | **7/7** + HTTP 200 (`/studio/login`, `/classic`, `/`) |
 
-*Usar siempre `http://127.0.0.1:8080` para E2E local (no mezclar con Vite en :8081).*
+*Túnel activo (variable): ver `TRYCLOUDFLARE-URL.txt`. E2E local siempre en `http://127.0.0.1:8080`.*
 
 ---
 

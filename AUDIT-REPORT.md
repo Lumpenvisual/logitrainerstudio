@@ -14,6 +14,8 @@
 | APIs Gemini (7 edges) | ✅ PASS |
 | Build producción | ✅ PASS |
 | E2E Playwright (Vercel) | ✅ **13/13** |
+| E2E local (`:8080`) | ✅ **13/13** |
+| E2E túnel (`tunnel:verify`) | ✅ **7/7** + HTTP 200 |
 | Vitest | ✅ 1/1 |
 | Código obsoleto | ✅ Eliminados `basic.spec.ts`, `local-llm.spec.ts`, script duplicado `test:e2e:tunnel:quick` |
 | Fixes aplicados | ✅ Race `useAuth`, redirect `/auth` → `/classic`, E2E por chunk lazy |
@@ -28,6 +30,8 @@
 npm run audit:lts      → secrets + 7 APIs + build OK
 npm run verify:prod    → 13/13 Playwright @ logitrainerstudio.vercel.app
 npm test               → 1/1 Vitest
+npx playwright test (PLAYWRIGHT_BASE_URL=http://127.0.0.1:8080) → 13/13
+npm run tunnel:verify  → HTTP 200 + 7/7 Playwright
 ```
 
 ### E2E producción (13)
