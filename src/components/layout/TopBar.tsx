@@ -106,14 +106,14 @@ export function TopBar({ onOpenAPIPanel, onSave, onOpenAdminPanel, onOpenMediaBr
   };
 
   return (
-    <div className="flex h-10 items-center justify-between border-b border-border/50 bg-card/40 backdrop-blur-sm px-4">
+    <div className="flex h-10 min-h-10 shrink-0 items-center justify-between gap-2 border-b border-border/50 bg-card/40 backdrop-blur-sm px-2 sm:px-4">
       {/* Breadcrumb */}
-      <div className="flex items-center gap-2">
-        <span className="font-display text-[13px] font-bold text-foreground/90 tracking-tight">{t('app.name')}</span>
-        <ChevronRight className="h-3 w-3 text-muted-foreground/20" />
-        <span className="text-[13px] text-muted-foreground/70 truncate max-w-[130px]">{projectTitle}</span>
-        <ChevronRight className="h-3 w-3 text-muted-foreground/20" />
-        <span className="text-xs font-semibold text-primary/80 font-display">{viewLabels[currentView]}</span>
+      <div className="flex min-w-0 flex-1 items-center gap-1 sm:gap-2">
+        <span className="hidden font-display text-[13px] font-bold tracking-tight text-foreground/90 sm:inline">{t('app.name')}</span>
+        <ChevronRight className="hidden h-3 w-3 shrink-0 text-muted-foreground/20 sm:block" />
+        <span className="min-w-0 truncate text-[12px] text-muted-foreground/70 sm:max-w-[140px] sm:text-[13px]">{projectTitle}</span>
+        <ChevronRight className="h-3 w-3 shrink-0 text-muted-foreground/20" />
+        <span className="shrink-0 text-[11px] font-semibold text-primary/80 font-display sm:text-xs">{viewLabels[currentView]}</span>
       </div>
 
       {/* Right */}

@@ -14,19 +14,8 @@ import {
 } from "./helpers/studio";
 
 async function openStudioFromHub(page: import("@playwright/test").Page) {
-  await gotoApp(page, "/studio/dashboard");
-  const gate = page.getByLabel(/Contraseña de acceso|Access password/i);
-  if (await gate.isVisible({ timeout: 4000 }).catch(() => false)) {
-    await gate.fill(SITE_PASSWORD);
-    await page.getByRole("button", { name: /Acceder al Studio|Enter studio/i }).click();
-    await expect(page).toHaveURL(/\/studio\/dashboard/, { timeout: 15_000 });
-  }
+  await passSiteGate(page);
   await page.getByRole("link", { name: /LogiTrainer Studio/i }).click();
-  if (new URL(page.url()).pathname === "/auth") {
-    await page.getByPlaceholder("you@example.com").fill(ADMIN_EMAIL);
-    await page.locator('input[type="password"]').first().fill(ADMIN_PASSWORD);
-    await page.getByRole("button", { name: /^sign in$/i }).click();
-  }
   await expectHomePath(page);
 }
 

@@ -1,8 +1,33 @@
 import { expect, type Page } from "@playwright/test";
 
-export const SITE_PASSWORD = process.env.STUDIO_ACCESS_PASSWORD ?? "LTS-Mayo2026-7kQ!";
-export const ADMIN_EMAIL = process.env.BACK_OFFICE_EMAIL ?? "backoffice@logitrainerstudio.app";
-export const ADMIN_PASSWORD = process.env.BACK_OFFICE_PASSWORD ?? "LTS-BackOffice-2026!mX";
+/** Unified studio credentials (site gate + Supabase). */
+export const UNIFIED_EMAIL = process.env.BACK_OFFICE_EMAIL ?? "backoffice@logitrainerstudio.app";
+export const UNIFIED_PASSWORD = process.env.STUDIO_ACCESS_PASSWORD ?? "LTS-Mayo2026-7kQ!";
+const LEGACY_PASSWORD = process.env.LEGACY_BACK_OFFICE_PASSWORD ?? "LTS-BackOffice-2026!mX";
+
+export async function supabasePasswordLogin(
+  request: import("@playwright/test").APIRequestContext,
+) {
+  for (const password of [UNIFIED_PASSWORD, LEGACY_PASSWORD]) {
+    const res = await request.post(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+      headers: { apikey: SUPABASE_ANON_KEY, "Content-Type": "application/json" },
+      data: { email: UNIFIED_EMAIL, password },
+    });
+    if (res.ok()) return res;
+  }
+  return request.post(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+    headers: { apikey: SUPABASE_ANON_KEY, "Content-Type": "application/json" },
+    data: { email: UNIFIED_EMAIL, password: UNIFIED_PASSWORD },
+  });
+}
+
+/** @deprecated Use UNIFIED_PASSWORD */
+export const SITE_PASSWORD = UNIFIED_PASSWORD;
+/** @deprecated Use UNIFIED_EMAIL */
+export const ADMIN_EMAIL = UNIFIED_EMAIL;
+/** @deprecated Use UNIFIED_PASSWORD */
+export const ADMIN_PASSWORD = UNIFIED_PASSWORD;
+
 export const SUPABASE_URL = process.env.VITE_SUPABASE_URL ?? "https://zghzhfheyawvbdddsybe.supabase.co";
 export const SUPABASE_ANON_KEY =
   process.env.VITE_SUPABASE_PUBLISHABLE_KEY ??
@@ -24,23 +49,29 @@ export async function skipOnboarding(page: Page) {
   });
 }
 
-export async function passSiteGate(page: Page) {
+/** Single login: hub gate + Supabase session. */
+export async function unifiedLogin(page: Page, opts?: { expectUrl?: RegExp }) {
   await gotoApp(page, "/studio/login");
-  const gate = page.getByLabel(/Contraseña de acceso|Access password/i);
-  if (await gate.isVisible({ timeout: 5000 }).catch(() => false)) {
-    await gate.fill(SITE_PASSWORD);
+  const emailField = page.getByLabel(/^Correo$|^Email$/i);
+  if (await emailField.isVisible({ timeout: 8000 }).catch(() => false)) {
+    await emailField.fill(UNIFIED_EMAIL);
+    await page.getByLabel(/^Contraseña$|^Password$/i).fill(UNIFIED_PASSWORD);
     await page.getByRole("button", { name: /Acceder al Studio|Enter studio/i }).click();
-    await expect(page).toHaveURL(/\/studio\/dashboard/, { timeout: 15_000 });
+    if (opts?.expectUrl) {
+      await expect(page).toHaveURL(opts.expectUrl, { timeout: 30_000 });
+    } else {
+      await expect(page).not.toHaveURL(/\/studio\/login$/, { timeout: 30_000 });
+    }
   }
-  await gotoApp(page, "/auth");
+}
+
+export async function passSiteGate(page: Page) {
+  await unifiedLogin(page);
 }
 
 export async function loginAsBackOffice(page: Page) {
-  await passSiteGate(page);
-  await expect(page.getByPlaceholder("you@example.com")).toBeVisible({ timeout: 20_000 });
-  await page.getByPlaceholder("you@example.com").fill(ADMIN_EMAIL);
-  await page.locator('input[type="password"]').first().fill(ADMIN_PASSWORD);
-  await page.getByRole("button", { name: /^sign in$/i }).click();
+  await unifiedLogin(page, { expectUrl: /\/studio\/dashboard/ });
+  await gotoApp(page, "/");
   await expect(page.getByText(/Welcome|New Project|Untitled|Architect/i).first()).toBeVisible({
     timeout: 30_000,
   });
@@ -67,11 +98,9 @@ export async function enterClassicStudio(page: Page) {
     .poll(() => new URL(page.url()).pathname, { timeout: 20_000 })
     .not.toBe("/classic");
 
-  if (new URL(page.url()).pathname === "/auth") {
-    await expect(page.getByPlaceholder("you@example.com")).toBeVisible({ timeout: 20_000 });
-    await page.getByPlaceholder("you@example.com").fill(ADMIN_EMAIL);
-    await page.locator('input[type="password"]').first().fill(ADMIN_PASSWORD);
-    await page.getByRole("button", { name: /^sign in$/i }).click();
+  const path = new URL(page.url()).pathname;
+  if (path === "/studio/login" || path === "/auth") {
+    await unifiedLogin(page, { expectUrl: /\// });
   }
 
   await expectHomePath(page);

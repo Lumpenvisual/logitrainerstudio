@@ -1,14 +1,11 @@
 import { useState, useEffect } from "react";
-import { Link, Navigate, useNavigate } from "react-router-dom";
+import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import {
   Activity,
   ExternalLink,
   Globe,
-  Lock,
   LogOut,
   MonitorPlay,
-  KeyRound,
-  AlertCircle,
   Server,
   Cloud,
   FolderGit2,
@@ -20,7 +17,10 @@ import {
   getStudioHubSession,
   type TunnelProjectInfo,
 } from "@/lib/studioHub";
-import { useStudioAuth, useRequireStudioAuth } from "@/hooks/useStudioAuth";
+import { useRequireStudioAuth } from "@/hooks/useStudioAuth";
+import { UnifiedLoginScreen } from "@/components/auth/UnifiedLoginScreen";
+import { useAuth } from "@/hooks/useAuth";
+import { signOutUnified } from "@/lib/unifiedSession";
 
 function StudioShell({ children }: { children: React.ReactNode }) {
   return (
@@ -39,86 +39,31 @@ function StudioShell({ children }: { children: React.ReactNode }) {
 
 export function StudioHubLogin() {
   const navigate = useNavigate();
-  const [password, setPassword] = useState("");
-  const { authenticated, error, setError, login } = useStudioAuth();
+  const location = useLocation();
   const links = getHubLinks();
+  const loginState = location.state as { from?: string; initialView?: string } | null;
 
   useEffect(() => {
-    if (authenticated || getStudioHubSession()) {
-      navigate("/studio/dashboard", { replace: true });
+    if (getStudioHubSession()) {
+      const target = loginState?.from && loginState.from !== "/studio/login" ? loginState.from : "/studio/dashboard";
+      navigate(target, { replace: true, state: loginState?.initialView ? { initialView: loginState.initialView } : undefined });
     }
-  }, [authenticated, navigate]);
+  }, [navigate, loginState]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (login(password)) {
-      navigate("/studio/dashboard", { replace: true });
-    }
+  const handleSuccess = () => {
+    const target = loginState?.from && loginState.from !== "/studio/login" ? loginState.from : "/studio/dashboard";
+    navigate(target, {
+      replace: true,
+      state: loginState?.initialView ? { initialView: loginState.initialView } : undefined,
+    });
   };
 
   return (
     <StudioShell>
-      <div className="flex min-h-screen items-center justify-center px-4 py-12">
-        <div className="w-full max-w-md rounded-2xl border border-border/60 bg-card/80 p-8 shadow-xl backdrop-blur-xl">
-          <div className="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-2xl border border-primary/25 bg-primary/15">
-            <Activity className="h-7 w-7 text-primary" />
-          </div>
-          <h1 className="text-center font-display text-2xl font-bold">
-            <span className="text-gradient-primary">LogiTrainer</span> Studio
-          </h1>
-          <p className="mt-2 text-center text-sm text-muted-foreground">
-            Acceso unificado — una sola contraseña para toda la plataforma.
-          </p>
-          {links.isTunnel && (
-            <p className="mt-2 text-center text-[10px] font-mono text-primary/80">
-              Túnel Cloudflare · {links.tunnelPublicUrl}
-            </p>
-          )}
-
-          <form onSubmit={handleSubmit} className="mt-8 space-y-4">
-            <div>
-              <label
-                htmlFor="studio-password"
-                className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-muted-foreground"
-              >
-                Contraseña de acceso
-              </label>
-              <div className="relative">
-                <KeyRound className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/50" />
-                <input
-                  id="studio-password"
-                  type="password"
-                  autoComplete="current-password"
-                  required
-                  value={password}
-                  onChange={(e) => {
-                    setPassword(e.target.value);
-                    setError(null);
-                  }}
-                  placeholder="••••••••••••"
-                  className="w-full rounded-lg border border-border/60 bg-background/80 py-3 pl-11 pr-4 text-sm outline-none transition focus:border-primary/50 focus:ring-2 focus:ring-primary/30"
-                />
-              </div>
-            </div>
-
-            {error && (
-              <p className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
-                <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-                {error}
-              </p>
-            )}
-
-            <button
-              type="submit"
-              disabled={!password.trim()}
-              className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary py-3 text-sm font-semibold text-primary-foreground transition hover:brightness-110 disabled:opacity-50"
-            >
-              <Lock className="h-4 w-4" />
-              Acceder al Studio
-            </button>
-          </form>
-        </div>
-      </div>
+      <UnifiedLoginScreen
+        tunnelHint={links.isTunnel ? `Túnel · ${links.tunnelPublicUrl}` : undefined}
+        onSuccess={handleSuccess}
+      />
     </StudioShell>
   );
 }
@@ -233,19 +178,15 @@ export function StudioHubDashboard() {
 
   if (!authenticated) return null;
 
-  const handleLogout = () => {
-    clearStudioHubSession();
-    navigate("/studio/login", { replace: true });
-  };
+  const { signOut } = useAuth();
 
-  const appDisabled = links.isVercelProduction;
-  const appWarning = appDisabled
-    ? `Usa el túnel: ${links.tunnelPublicUrl}`
-    : undefined;
+  const handleLogout = () => {
+    void signOutUnified(signOut).then(() => navigate("/studio/login", { replace: true }));
+  };
 
   return (
     <StudioShell>
-      <div className="mx-auto max-w-3xl px-4 py-10">
+      <div className="mx-auto w-full max-w-3xl px-4 py-6 sm:py-10">
         <header className="mb-10 flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-primary/25 bg-primary/15">
@@ -276,8 +217,6 @@ export function StudioHubDashboard() {
             description="Studio Pro unificado: guion, timeline, Production Suite (editor DnD, funnels, ebooks, export canvas), APIs Gemini."
             href={links.appPrincipal}
             icon={Server}
-            disabled={appDisabled}
-            warning={appWarning}
           />
           <HubLinkCard
             title="Demo promocional"
@@ -305,7 +244,7 @@ export function StudioHubDashboard() {
         </div>
 
         <p className="mt-10 text-center text-[10px] font-mono text-muted-foreground/50">
-          Back-office Supabase: inicia sesión en /auth tras abrir la app principal.
+          Misma cuenta en hub, Studio Pro y Production Suite.
         </p>
       </div>
     </StudioShell>

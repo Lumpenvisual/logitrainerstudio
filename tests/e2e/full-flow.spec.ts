@@ -1,35 +1,15 @@
 import { test, expect } from "@playwright/test";
-import {
-  ADMIN_EMAIL,
-  ADMIN_PASSWORD,
-  SITE_PASSWORD,
-  SUPABASE_ANON_KEY,
-  SUPABASE_URL,
-  enterWorkspaceFromWelcome,
-  loginAsBackOffice,
-  passSiteGate,
-} from "./helpers/studio";
+import { SUPABASE_ANON_KEY, SUPABASE_URL, supabasePasswordLogin, unifiedLogin } from "./helpers/studio";
 
 test.describe("Full production flow", () => {
-  test("site gate → auth → workspace", async ({ page }) => {
-    await page.goto("/studio/login");
-    await page.getByLabel(/Contraseña de acceso/i).fill(SITE_PASSWORD);
-    await page.getByRole("button", { name: /Acceder al Studio/i }).click();
-    await page.goto("/auth");
-    await expect(page.getByRole("heading", { name: /Welcome back/i })).toBeVisible({ timeout: 20_000 });
-
-    await page.getByPlaceholder("you@example.com").fill(ADMIN_EMAIL);
-    await page.locator('input[type="password"]').first().fill(ADMIN_PASSWORD);
-    await page.getByRole("button", { name: /^sign in$/i }).click();
-
+  test("unified login → workspace", async ({ page }) => {
+    await unifiedLogin(page, { expectUrl: /\/studio\/dashboard/ });
+    await page.goto("/");
     await expect(page.getByText(/New Project|Welcome|Architect/i).first()).toBeVisible({ timeout: 30_000 });
   });
 
   test("API health: Gemini script edge", async ({ request }) => {
-    const login = await request.post(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
-      headers: { apikey: SUPABASE_ANON_KEY, "Content-Type": "application/json" },
-      data: { email: ADMIN_EMAIL, password: ADMIN_PASSWORD },
-    });
+    const login = await supabasePasswordLogin(request);
     expect(login.ok()).toBeTruthy();
     const { access_token } = await login.json();
 

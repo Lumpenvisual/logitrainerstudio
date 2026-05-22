@@ -6,23 +6,17 @@ test.describe("Studio hub (/studio)", () => {
     await gotoApp(page, "/studio/login");
     await expect(page.getByRole("heading", { name: /LogiTrainer/i })).toBeVisible();
 
-    await page.getByLabel(/Contraseña de acceso/i).fill("wrong");
+    await page.getByLabel(/^Contraseña$|^Password$/i).fill("wrong");
     await page.getByRole("button", { name: /Acceder al Studio/i }).click();
-    await expect(page.getByText(/Contraseña incorrecta/i)).toBeVisible();
+    await expect(page.getByText(/incorrectos|incorrecta|Incorrect/i)).toBeVisible();
 
-    await page.getByLabel(/Contraseña de acceso/i).fill(SITE_PASSWORD);
+    await page.getByLabel(/^Contraseña$|^Password$/i).fill(SITE_PASSWORD);
     await page.getByRole("button", { name: /Acceder al Studio/i }).click();
 
     await expect(page).toHaveURL(/\/studio\/dashboard/, { timeout: 15_000 });
     await expect(page.getByRole("heading", { name: /LogiTrainer/i }).first()).toBeVisible({
       timeout: 15_000,
     });
-
-    if (process.env.PLAYWRIGHT_BASE_URL?.includes("trycloudflare.com")) {
-      await gotoApp(page, "/auth");
-      await expect(page.getByPlaceholder("you@example.com")).toBeVisible({ timeout: 20_000 });
-      return;
-    }
 
     await gotoApp(page, "/");
     await expect(
@@ -34,7 +28,8 @@ test.describe("Studio hub (/studio)", () => {
 
   test("logout clears session", async ({ page }) => {
     await gotoApp(page, "/studio/login");
-    await page.getByLabel(/Contraseña de acceso/i).fill(SITE_PASSWORD);
+    await page.getByLabel(/^Correo$|^Email$/i).fill(process.env.BACK_OFFICE_EMAIL ?? "backoffice@logitrainerstudio.app");
+    await page.getByLabel(/^Contraseña$|^Password$/i).fill(SITE_PASSWORD);
     await page.getByRole("button", { name: /Acceder al Studio/i }).click();
     await expect(page).toHaveURL(/\/studio\/dashboard/);
 

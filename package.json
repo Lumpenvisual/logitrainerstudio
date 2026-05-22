@@ -41,6 +41,7 @@
     "verify:prod": "npm run check:secrets && npm run test:ai-apis && playwright test",
     "verify:all": "npm run verify:prod",
     "seed:back-office": "node scripts/seed-back-office.mjs",
+    "sync:unified-password": "node scripts/seed-back-office.mjs",
     "test:gemini": "node scripts/test-gemini-edge.mjs",
     "test:ai-apis": "node scripts/test-all-ai-apis.mjs",
     "audit:lts": "node scripts/audit-lts.mjs",

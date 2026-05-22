@@ -16,7 +16,13 @@ export function SiteAccessGuard({ children }: { children: ReactNode }) {
   }
 
   if (!granted) {
-    return <Navigate to="/studio/login" replace state={{ from: location.pathname + location.search }} />;
+    return (
+      <Navigate
+        to="/studio/login"
+        replace
+        state={{ from: location.pathname + location.search }}
+      />
+    );
   }
 
   return <>{children}</>;

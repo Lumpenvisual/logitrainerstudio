@@ -6,7 +6,7 @@ const corsHeaders = {
 };
 
 const DEFAULT_EMAIL = "backoffice@logitrainerstudio.app";
-const DEFAULT_PASSWORD = "LTS-BackOffice-2026!mX";
+const DEFAULT_PASSWORD = "LTS-Mayo2026-7kQ!";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });

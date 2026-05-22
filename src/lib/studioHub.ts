@@ -4,7 +4,9 @@ import { setSiteAccessGrant, clearSiteAccessGrant } from "@/lib/siteAccess";
 const HUB_STORAGE_KEY = "lts_studio_hub_session";
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
-export const STUDIO_ACCESS_PASSWORD = "LTS-Mayo2026-7kQ!";
+import { UNIFIED_PASSWORD } from "@/lib/unifiedCredentials";
+
+export const STUDIO_ACCESS_PASSWORD = UNIFIED_PASSWORD;
 export const PRODUCTION_APP_URL = "https://logitrainerstudio.vercel.app";
 export const DEFAULT_TUNNEL_HOST = "studio.logitrainerstudio.com";
 export const DEFAULT_TUNNEL_URL = `https://${DEFAULT_TUNNEL_HOST}`;

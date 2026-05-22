@@ -149,7 +149,7 @@ const Index = () => {
     }
     return (
       <Navigate
-        to="/auth"
+        to="/studio/login"
         replace
         state={{ from: location.pathname, initialView: routeInitialView }}
       />
@@ -218,7 +218,7 @@ const Index = () => {
   return (
     <>
       <CommandPalette />
-      <div className="flex h-screen w-screen overflow-hidden bg-background">
+      <div className="flex h-[100dvh] h-screen w-full max-w-[100vw] overflow-hidden bg-background">
         <AppSidebar onToggleAlerts={() => setShowAlerts(!showAlerts)} isAlertsOpen={showAlerts} />
         <div className="flex flex-1 flex-col overflow-hidden">
           <TopBar

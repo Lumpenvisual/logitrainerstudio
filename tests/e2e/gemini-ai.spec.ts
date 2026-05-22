@@ -1,20 +1,14 @@
 import { test, expect } from "@playwright/test";
 import {
-  ADMIN_EMAIL,
-  ADMIN_PASSWORD,
-  SUPABASE_ANON_KEY,
-  SUPABASE_URL,
   enterWorkspaceFromWelcome,
+  supabasePasswordLogin,
   loginAsBackOffice,
   skipOnboarding,
 } from "./helpers/studio";
 
 test.describe("Gemini AI (Supabase edge)", () => {
   test.beforeEach(async ({ request }) => {
-    const loginProbe = await request.post(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
-      headers: { apikey: SUPABASE_ANON_KEY, "Content-Type": "application/json" },
-      data: { email: ADMIN_EMAIL, password: ADMIN_PASSWORD },
-    });
+    const loginProbe = await supabasePasswordLogin(request);
     test.skip(!loginProbe.ok(), "Back-office user not available — run npm run seed:back-office");
   });
 

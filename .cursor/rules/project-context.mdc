@@ -39,7 +39,7 @@ alwaysApply: true
 
 ## Acceso unificado `/studio`
 
-- Contraseña: `LTS-Mayo2026-7kQ!` — `src/lib/studioHub.ts`, localStorage `lts_studio_hub_session`
+- **Cuenta unificada:** `backoffice@logitrainerstudio.app` / `LTS-Mayo2026-7kQ!` — `/studio/login` (`UnifiedLoginScreen`, `unifiedCredentials.ts`)
 - Rutas: `/studio`, `/studio/login`, `/studio/dashboard`
 - `SiteAccessGuard` redirige a `/studio/login` si no hay sesión
 - Hub → `/` requiere login Supabase en `/auth` además del site gate
@@ -67,7 +67,7 @@ alwaysApply: true
 
 ## Auth back-office
 
-- `backoffice@logitrainerstudio.app` / `LTS-BackOffice-2026!mX`
+- Misma cuenta que hub: `backoffice@logitrainerstudio.app` / `LTS-Mayo2026-7kQ!` — `npm run sync:unified-password` para alinear Supabase
 - Tras hub: `/auth` — helpers en `tests/e2e/helpers/studio.ts` (`passSiteGate`, `enterClassicStudio`, `expectHomePath`)
 
 ## Demo

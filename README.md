@@ -15,7 +15,7 @@ Plataforma de producción audiovisual con IA (Vite + React + Supabase + Gemini).
 
 **Memoria del proyecto:** [PROJECT-MEMORY.md](PROJECT-MEMORY.md) | **Auditoría:** [AUDIT-REPORT.md](AUDIT-REPORT.md) | **Integración Rafael:** [docs/INTEGRATION-RAFAEL-REPO.md](docs/INTEGRATION-RAFAEL-REPO.md)
 
-**Contraseña hub:** `LTS-Mayo2026-7kQ!`
+**Cuenta unificada:** `backoffice@logitrainerstudio.app` / `LTS-Mayo2026-7kQ!` (hub, Studio Pro y Supabase)
 
 ## Desarrollo local
 

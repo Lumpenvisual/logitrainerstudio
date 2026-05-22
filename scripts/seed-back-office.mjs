@@ -48,7 +48,7 @@ const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const setupSecret = process.env.BACK_OFFICE_SETUP_SECRET || "LTS-Bootstrap-2026-xK9";
 
 const ADMIN_EMAIL = process.env.BACK_OFFICE_EMAIL || "backoffice@logitrainerstudio.app";
-const ADMIN_PASSWORD = process.env.BACK_OFFICE_PASSWORD || "LTS-BackOffice-2026!mX";
+const ADMIN_PASSWORD = process.env.BACK_OFFICE_PASSWORD || process.env.STUDIO_ACCESS_PASSWORD || "LTS-Mayo2026-7kQ!";
 
 const bootstrapOnly = process.argv.includes("--bootstrap-only");
 
@@ -127,12 +127,40 @@ async function tryBootstrapRpc() {
   return false;
 }
 
+async function forceUpdatePassword() {
+  if (!serviceKey) return false;
+  const admin = createClient(url, serviceKey);
+  const { data: list, error: listErr } = await admin.auth.admin.listUsers();
+  if (listErr) {
+    console.warn("listUsers:", listErr.message);
+    return false;
+  }
+  const user = list?.users?.find((u) => u.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase());
+  if (!user?.id) return false;
+  const { error } = await admin.auth.admin.updateUserById(user.id, { password: ADMIN_PASSWORD });
+  if (error) {
+    console.warn("updateUserById:", error.message);
+    return false;
+  }
+  console.log("✓ password updated to unified value");
+  return true;
+}
+
 async function verifyLogin() {
   const supabase = createClient(url, anonKey);
-  const { data, error } = await supabase.auth.signInWithPassword({
+  let { data, error } = await supabase.auth.signInWithPassword({
     email: ADMIN_EMAIL,
     password: ADMIN_PASSWORD,
   });
+  if (error) {
+    const updated = await forceUpdatePassword();
+    if (updated) {
+      ({ data, error } = await supabase.auth.signInWithPassword({
+        email: ADMIN_EMAIL,
+        password: ADMIN_PASSWORD,
+      }));
+    }
+  }
   if (error) {
     console.error("✗ login failed:", error.message);
     return false;
