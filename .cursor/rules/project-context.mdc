@@ -9,8 +9,9 @@ alwaysApply: true
 
 - **Código canónico:** `C:\proyectos\logitrainerstudio`
 - **GitHub:** https://github.com/Lumpenvisual/logitrainerstudio
-- **Memoria humana:** `PROJECT-MEMORY.md` | **Auditoría:** `AUDIT-REPORT.md` | **Integración clásico:** `docs/INTEGRATION-RAFAEL-REPO.md`
-- **Git:** `main` — integración Rafael, `/classic`, fixes auth + E2E 13/13 prod
+- **Memoria humana:** `PROJECT-MEMORY.md` | **Auditoría:** `AUDIT-REPORT.md` | **Integración suite:** `docs/INTEGRATION-RAFAEL-REPO.md`
+- **Git:** `main` @ `eaf3ccb` — integración unificada en working tree (**sin commit**)
+- **Dev:** `npm start` → http://localhost:8080
 
 ## Despliegue
 
@@ -18,29 +19,36 @@ alwaysApply: true
 - **Deploy:** `npx vercel deploy --prod --yes`
 - **SPA:** `vercel.json` rewrites a `index.html`
 
-## Rutas principales
+## Rutas principales (una app)
 
-| Ruta | App |
-|------|-----|
-| `/` | Studio Pro (Zustand, timeline, `RenderExportPanel` + `videoRenderer`) |
-| `/classic` | Studio clásico Lovable (`React.lazy`, chunk `classic-studio`) |
-| `/studio` | Hub login/dashboard |
+| Ruta | Comportamiento |
+|------|----------------|
+| `/` | Studio Pro + vista `suite` (Production Suite, lazy `classic-studio`) |
+| `/classic` | Redirect → `/` con `initialView: "suite"` (no página aparte) |
+| `/studio` | Hub login/dashboard — tarjeta única “LogiTrainer Studio” |
 | `/demo` | Demo pública (sin site gate) |
+
+## Production Suite (integrada)
+
+- Componente: `ClassicStudioWorkspace.tsx` en `src/components/classic-studio/`
+- Activación: `useProjectStore` → `setView('suite')` o redirect `/classic`
+- Salir: `StudioLayout` `onExitToPro` → vista `architect`
+- Sidebar: botón **Production Suite** (`aria-label`), no `Link` a `/classic`
+- Auth: `Auth.tsx` pasa `initialView: "suite"`; `Index` usa `sessionStorage` `lts-pending-view` como respaldo
 
 ## Acceso unificado `/studio`
 
 - Contraseña: `LTS-Mayo2026-7kQ!` — `src/lib/studioHub.ts`, localStorage `lts_studio_hub_session`
 - Rutas: `/studio`, `/studio/login`, `/studio/dashboard`
 - `SiteAccessGuard` redirige a `/studio/login` si no hay sesión
-- Código: `StudioHub.tsx`, `useStudioAuth.ts`, `TunnelRootRedirect.tsx` (trycloudflare → `/studio`)
+- Hub → `/` requiere login Supabase en `/auth` además del site gate
 
 ## Túnel localhost:8080
 
 - Quick Tunnel: `npm run publish:trycloudflare` | URL: `TRYCLOUDFLARE-URL.txt`
 - Verificación: `npm run tunnel:verify` (HTTP + 7 E2E en `:8080`)
 - Sin ventanas cmd: `npm run tunnel:silence` | Desactivar: `npm run tunnel:disable`
-- Helpers: `scripts/tunnel-helpers.ps1`, `tunnel-stack-start.ps1`
-- Docs: `docs/CLOUDFLARE-TUNNEL.md`
+- E2E local: **siempre** `http://127.0.0.1:8080` (`npm start`)
 
 ## Supabase (propietario)
 
@@ -53,22 +61,17 @@ alwaysApply: true
 
 - Gemini nativo: `supabase/functions/_shared/gemini.ts`
 - Studio Pro: `aiService.ts` + `edgeClient.ts`
-- Studio clásico: `src/services/classic/apiService.ts`
-- Smoke: `npm run test:ai-apis` | E2E prod: `npm run verify:prod` (13) | Túnel: `npm run tunnel:verify` (7)
+- Production Suite: `src/services/classic/apiService.ts`
+- Smoke: `npm run test:ai-apis` | E2E prod: `npm run verify:prod` | Local: 14 tests en `tests/e2e/`
 
 ## Auth back-office
 
 - `backoffice@logitrainerstudio.app` / `LTS-BackOffice-2026!mX`
-- Tras hub: `/auth` — `passSiteGate()` en `tests/e2e/helpers/studio.ts`
+- Tras hub: `/auth` — helpers en `tests/e2e/helpers/studio.ts` (`passSiteGate`, `enterClassicStudio`, `expectHomePath`)
 
 ## Demo
 
 - `/demo` público — `public/demo/logitrainer/` — `npm run demo:generate`
-
-## Navegación entre editores
-
-- Pro → clásico: `AppSidebar` enlace `/classic`
-- Clásico → Pro: `StudioLayout` header "Studio Pro" → `/`
 
 ## Skills
 

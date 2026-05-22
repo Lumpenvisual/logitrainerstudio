@@ -69,7 +69,7 @@ export default defineConfig(({ mode }) => {
     rollupOptions: {
       output: {
         manualChunks(id) {
-          if (id.includes("src/components/classic-studio/") || id.includes("src/pages/ClassicStudio")) {
+          if (id.includes("src/components/classic-studio/")) {
             return "classic-studio";
           }
           if (id.includes("src/lib/videoRenderer")) {

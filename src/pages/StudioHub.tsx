@@ -4,7 +4,6 @@ import {
   Activity,
   ExternalLink,
   Globe,
-  FolderGit2,
   Lock,
   LogOut,
   MonitorPlay,
@@ -12,6 +11,7 @@ import {
   AlertCircle,
   Server,
   Cloud,
+  FolderGit2,
 } from "lucide-react";
 import {
   clearStudioHubSession,
@@ -272,18 +272,10 @@ export function StudioHubDashboard() {
 
         <div className="grid gap-4 sm:grid-cols-2">
           <HubLinkCard
-            title="App principal"
-            description="Studio Pro — guion, timeline, APIs Gemini, marketing integrado."
+            title="LogiTrainer Studio"
+            description="Studio Pro unificado: guion, timeline, Production Suite (editor DnD, funnels, ebooks, export canvas), APIs Gemini."
             href={links.appPrincipal}
             icon={Server}
-            disabled={appDisabled}
-            warning={appWarning}
-          />
-          <HubLinkCard
-            title="Studio clásico"
-            description="UI completa del repo Lovable: editor DnD, funnels, ebooks, export canvas."
-            href={links.classicStudio}
-            icon={FolderGit2}
             disabled={appDisabled}
             warning={appWarning}
           />

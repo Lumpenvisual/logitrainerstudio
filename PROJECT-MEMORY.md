@@ -1,23 +1,23 @@
 # Memoria del proyecto — LogiTrainer Studio
 
-**Última actualización:** 2026-05-21  
+**Última actualización:** 2026-05-22 (sesión abierta)  
 **Repo:** https://github.com/Lumpenvisual/logitrainerstudio  
 **Carpeta local:** `C:\proyectos\logitrainerstudio`  
-**Git local:** `main` — sincronizado con `origin/main` (`eae7d13`)
+**Git:** `main` = `origin/main` @ `eaf3ccb` · **working tree:** integración unificada sin commit (18 M, 1 nuevo, 1 borrado)
 
 ---
 
 ## Qué es
 
-Plataforma audiovisual con IA (Vite + React + Supabase + Gemini): guion por escenas, imágenes, audio TTS, timeline, marketing, agentes. Incluye **dos editores** en un solo repo.
+Plataforma audiovisual con IA (Vite + React + Supabase + Gemini): guion por escenas, imágenes, audio TTS, timeline, marketing, agentes. **Una sola app** en `/` (Studio Pro) con vista integrada **Production Suite** (antes “Studio clásico”).
 
 ## Rutas
 
 | Ruta | Descripción |
 |------|-------------|
-| `/` | **Studio Pro** — Zustand, timeline, paneles marketing, export canvas (`RenderExportPanel`) |
-| `/classic` | **Studio clásico** — UI Lovable integrada (repo Rafael), lazy-loaded |
-| `/studio` | Hub de acceso unificado (login + dashboard) |
+| `/` | **Studio Pro** — Zustand, timeline, paneles marketing, export canvas; vista `suite` = Production Suite (lazy `classic-studio`) |
+| `/classic` | **Solo redirect** → `/` con `state.initialView: "suite"` (compatibilidad bookmarks) |
+| `/studio` | Hub de acceso unificado (login + dashboard) — una tarjeta “LogiTrainer Studio” |
 | `/demo` | Demo promocional pública |
 | `/auth`, `/profile`, `/about` | Auth y perfil (tras site gate) |
 
@@ -25,10 +25,10 @@ Plataforma audiovisual con IA (Vite + React + Supabase + Gemini): guion por esce
 
 | Servicio | URL |
 |----------|-----|
-| Producción | https://logitrainerstudio.vercel.app |
+| Producción | https://logitrainerstudio.vercel.app *(pendiente redeploy con integración unificada)* |
 | Login unificado | `/studio` |
 | Demo pública | `/demo` |
-| Studio clásico | `/classic` |
+| Production Suite | Sidebar → **Production Suite** o `/classic` (redirect) |
 | Supabase | `zghzhfheyawvbdddsybe` |
 | Túnel local (variable) | `TRYCLOUDFLARE-URL.txt` |
 
@@ -46,49 +46,72 @@ Plataforma audiovisual con IA (Vite + React + Supabase + Gemini): guion por esce
 ```powershell
 cd C:\proyectos\logitrainerstudio
 npm install
-npm start                    # :8080
+npm start                    # :8080 (E2E local exigen este puerto)
 npm run build                # chunk classic-studio ~1.9MB lazy; main ~465KB
 npm run audit:lts            # secrets + APIs + build
-npm run verify:prod          # E2E Playwright vs Vercel (suite completa)
-npm run tunnel:verify        # HTTP túnel + 7 tests Playwright (hub, gate, classic)
-npm run tunnel:silence       # tareas Windows sin ventanas cmd
-npm run tunnel:disable       # desactivar stack local
-npm run publish:trycloudflare
+npm run verify:prod          # E2E Playwright vs Vercel (tras deploy)
+npm run tunnel:verify        # HTTP túnel + 7 tests Playwright
+npx playwright test          # local: PLAYWRIGHT_BASE_URL=http://127.0.0.1:8080
 npx vercel deploy --prod --yes
 ```
 
-## Arquitectura clave
+## Arquitectura clave (unificada)
 
 | Área | Ubicación |
 |------|-----------|
+| Shell Studio Pro | `src/pages/Index.tsx` — `currentView === 'suite'` → `ClassicStudioWorkspace` |
+| Production Suite | `src/components/classic-studio/ClassicStudioWorkspace.tsx` (sin página `/classic` aparte) |
+| Salir de suite | `StudioLayout` → `onExitToPro` → vista `architect` |
+| Sidebar Pro | `AppSidebar` — botón **Production Suite** (`setView('suite')`), `aria-label` |
+| Auth + suite | `Auth.tsx` + `sessionStorage` `lts-pending-view` si redirect desde `/classic` |
 | IA cliente Studio Pro | `src/services/aiService.ts` → `src/lib/edgeClient.ts` |
-| IA clásico | `src/services/classic/apiService.ts` (edge `ai-*`) |
-| Hub acceso | `src/lib/studioHub.ts`, `src/pages/StudioHub.tsx` |
+| IA suite | `src/services/classic/apiService.ts` (edge `ai-*`) |
+| Hub acceso | `src/lib/studioHub.ts`, `src/pages/StudioHub.tsx` (fix import `FolderGit2`) |
 | Export video canvas | `src/lib/videoRenderer.ts`, `src/lib/sceneAdapters.ts` |
-| Classic UI | `src/components/classic-studio/` (52), `src/pages/ClassicStudio.tsx` |
+| Classic UI | `src/components/classic-studio/` (~52 componentes) |
 | Edge Gemini | `supabase/functions/_shared/gemini.ts` |
 | Code split | `vite.config.ts` → chunks `classic-studio`, `video-renderer` |
-| E2E | `tests/e2e/` |
+| E2E | `tests/e2e/` — `helpers/studio.ts` (`enterClassicStudio`, `expectHomePath`) |
 
 ## Integración repo Rafael
 
 Ver **`docs/INTEGRATION-RAFAEL-REPO.md`**. Origen: [rafaelcastro7/logitrainer-a65fca34](https://github.com/rafaelcastro7/logitrainer-a65fca34).
 
-- Navegación cruzada: sidebar Pro (icono cuadrícula) → `/classic`; header clásico → **Studio Pro** → `/`
-- Migración `generated_content`; función `generate-music`
+- **Ya no hay app separada en `/classic`** — todo en Studio Pro
+- Navegación: sidebar **Production Suite**; header suite → **Studio Pro**
+- Eliminado: `src/pages/ClassicStudio.tsx`
+
+## Estado al abrir (sesión actual)
+
+| Item | Estado |
+|------|--------|
+| Integración unificada (Studio Pro + Production Suite) | Working tree listo; **prod aún en `eaf3ccb`** |
+| Dev server | **http://localhost:8080** — Vite activo (PID en `:8080`) |
+| E2E local (última corrida) | 14/14 con código actual |
+| Commit sugerido | `Unify Production Suite into Studio Pro; remove separate /classic app` |
+
+### Cambios pendientes de commit
+
+- **App:** `App.tsx`, `Index.tsx`, `Auth.tsx`, `ClassicStudioWorkspace.tsx` (nuevo), eliminado `ClassicStudio.tsx`
+- **UI:** `AppSidebar.tsx`, `StudioLayout.tsx`, `StudioHub.tsx` (+ fix `FolderGit2`)
+- **Store:** `useProjectStore.ts` (`ViewMode` incluye `suite`)
+- **Tests:** `classic-studio.spec.ts`, `helpers/studio.ts`, `studio-hub.spec.ts`
+- **Docs:** `PROJECT-MEMORY.md`, `AUDIT-REPORT.md`, `README.md`, `INTEGRATION-RAFAEL-REPO.md`, `.cursor/rules/project-context.mdc`
+
+**Pipeline pendiente:** commit → push → `npx vercel deploy --prod` → `npm run verify:prod`
+
+## E2E (última verificación local 2026-05-21)
+
+| Suite | Resultado |
+|-------|-----------|
+| Playwright local `:8080` | **14/14** (tras fix assert hub + `FolderGit2`) |
+| `audit:lts` | OK |
+| `verify:prod` | Pendiente hasta deploy unificado |
 
 ## Persistencia túnel (Windows)
 
-- `LogiTrainerStudio-TunnelStack` — al iniciar sesión (puede desactivarse con `tunnel:disable`)
+- `LogiTrainerStudio-TunnelStack` — al iniciar sesión (`tunnel:disable` para desactivar)
 - Scripts: `tunnel-helpers.ps1`, `tunnel-stack-start.ps1`, `run-hidden.vbs`, `silence-tunnel-tasks.ps1`
-- Vite sin ventana `cmd`: `Start-LtsViteHidden` en helpers
-
-## Commits recientes (local, sin push)
-
-| Commit | Resumen |
-|--------|---------|
-| `1a0c405` | Integración Rafael, export canvas, túnel silencioso, E2E |
-| `6ef37ad` | Lazy `/classic`, manualChunks, navegación Pro ↔ clásico |
 
 ## Documentación
 
@@ -96,7 +119,7 @@ Ver **`docs/INTEGRATION-RAFAEL-REPO.md`**. Origen: [rafaelcastro7/logitrainer-a6
 |---------|-----------|
 | `AGENTS.md` | Guía agentes |
 | `AUDIT-REPORT.md` | Última auditoría |
-| `docs/INTEGRATION-RAFAEL-REPO.md` | Fusión Studio clásico |
+| `docs/INTEGRATION-RAFAEL-REPO.md` | Fusión Production Suite |
 | `docs/CLOUDFLARE-TUNNEL.md` | Túnel Cloudflare |
 | `README.md` | Inicio rápido |
 | `.cursor/rules/project-context.mdc` | Regla Cursor always-on |
@@ -105,16 +128,6 @@ Ver **`docs/INTEGRATION-RAFAEL-REPO.md`**. Origen: [rafaelcastro7/logitrainer-a6
 
 `lts-supabase-backend`, `lts-edge-client`, `lts-gemini-api`, `lts-e2e-verification`, `lts-demo`, `lts-studio-hub`
 
-## E2E (última verificación 2026-05-21)
-
-| Suite | Resultado |
-|-------|-----------|
-| `verify:prod` | **13/13** vs Vercel |
-| `audit:lts` | OK (secrets + APIs + build) |
-| `tunnel:verify` | **7/7** + HTTP 200 (`/studio/login`, `/classic`, `/`) |
-
-*Túnel activo (variable): ver `TRYCLOUDFLARE-URL.txt`. E2E local siempre en `http://127.0.0.1:8080`.*
-
 ---
 
-*Actualizar este archivo tras cambios mayores de arquitectura o verificación completa.*
+*Actualizar este archivo tras commit/deploy o verificación completa en prod.*

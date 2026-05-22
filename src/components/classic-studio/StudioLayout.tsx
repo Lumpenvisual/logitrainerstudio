@@ -48,6 +48,7 @@ interface StudioLayoutProps {
   onGenerateAllAudios?: () => void;
   lastSaved?: Date | null;
   isSaving?: boolean;
+  onExitToPro?: () => void;
 }
 
 // Bottom nav tabs for mobile - most used ones
@@ -86,7 +87,7 @@ const ALL_TABS = [
   { id: 'about', icon: Info, label: 'About', group: 'System' },
 ];
 
-export default function StudioLayout({ activeTab, onTabChange, children, scenes, hasProject, user, onSave, onOpenProjects, onOpenAuth, onSignOut, onNewProject, onUndo, onRedo, canUndo, canRedo, selectedSceneId, onSelectScene, onReorderScenes, onUpdateScene, onRegenerateImage, onRegenerateAudio, onDuplicateScene, onRemoveScene, isAdmin, onGenerateAllImages, onGenerateAllAudios, lastSaved, isSaving }: StudioLayoutProps) {
+export default function StudioLayout({ activeTab, onTabChange, children, scenes, hasProject, user, onSave, onOpenProjects, onOpenAuth, onSignOut, onNewProject, onUndo, onRedo, canUndo, canRedo, selectedSceneId, onSelectScene, onReorderScenes, onUpdateScene, onRegenerateImage, onRegenerateAudio, onDuplicateScene, onRemoveScene, isAdmin, onGenerateAllImages, onGenerateAllAudios, lastSaved, isSaving, onExitToPro }: StudioLayoutProps) {
   const { t, locale, setLocale } = useTranslation();
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -218,13 +219,24 @@ export default function StudioLayout({ activeTab, onTabChange, children, scenes,
               </DropdownMenu>
             )}
 
-            <Link
-              to="/"
-              className="hidden sm:inline-flex items-center gap-1 rounded-md border border-border/30 px-2 py-1 text-[10px] font-semibold text-muted-foreground transition-colors hover:border-primary/30 hover:text-primary"
-            >
-              <Sparkles className="h-3 w-3" />
-              Studio Pro
-            </Link>
+            {onExitToPro ? (
+              <button
+                type="button"
+                onClick={onExitToPro}
+                className="hidden sm:inline-flex items-center gap-1 rounded-md border border-border/30 px-2 py-1 text-[10px] font-semibold text-muted-foreground transition-colors hover:border-primary/30 hover:text-primary"
+              >
+                <Sparkles className="h-3 w-3" />
+                Studio Pro
+              </button>
+            ) : (
+              <Link
+                to="/"
+                className="hidden sm:inline-flex items-center gap-1 rounded-md border border-border/30 px-2 py-1 text-[10px] font-semibold text-muted-foreground transition-colors hover:border-primary/30 hover:text-primary"
+              >
+                <Sparkles className="h-3 w-3" />
+                Studio Pro
+              </Link>
+            )}
 
             <ThemeToggle />
 

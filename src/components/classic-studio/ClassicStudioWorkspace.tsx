@@ -3,7 +3,6 @@ import { useProject } from '@/hooks/classic/useProject';
 import { useAuth } from '@/hooks/useAuth';
 import { useApproval } from '@/hooks/useApproval';
 import { useProjects } from '@/hooks/classic/useProjects';
-import { Navigate, useLocation } from 'react-router-dom';
 import { useAutoSave, getAutoSavedProject, clearAutoSave } from '@/hooks/classic/useAutoSave';
 import { useKeyboardShortcuts } from '@/hooks/classic/useKeyboardShortcuts';
 import StudioLayout from '@/components/classic-studio/StudioLayout';
@@ -22,7 +21,6 @@ import OnboardingTour from '@/components/classic-studio/OnboardingTour';
 import AuthDialog from '@/components/classic-studio/AuthDialog';
 import ProjectsDialog from '@/components/classic-studio/ProjectsDialog';
 import AdminApprovalPanel from '@/components/classic-studio/AdminApprovalPanel';
-import PendingApprovalScreen from '@/components/classic-studio/PendingApprovalScreen';
 import EbookGenerator from '@/components/classic-studio/EbookGenerator';
 import LandingPageBuilder from '@/components/classic-studio/LandingPageBuilder';
 import AdCreativeGenerator from '@/components/classic-studio/AdCreativeGenerator';
@@ -45,19 +43,21 @@ import { generateScript, generateImage, generateTTS, trackUsage, getUserApiKeys 
 import { type Priority } from '@/services/classic/smartRouter';
 import { toast } from 'sonner';
 import { useTranslation } from '@/i18n/LanguageContext';
-import { Loader2, Film } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
-export default function ClassicStudio() {
-  const location = useLocation();
+export interface ClassicStudioWorkspaceProps {
+  onExitToPro?: () => void;
+}
+
+export function ClassicStudioWorkspace({ onExitToPro }: ClassicStudioWorkspaceProps) {
   const {
     project, activeTab, setActiveTab,
     updateMeta, setScenes, updateScene, removeScene, addScene, reorderScenes,
     loadProject, resetProject, undo, redo, canUndo, canRedo,
     updateBackgroundMusic,
   } = useProject();
-  const { user, loading: authLoading, signUp, signIn, signOut } = useAuth();
-  const { isApproved, isAdmin, loading: approvalLoading } = useApproval();
+  const { user, signUp, signIn, signOut } = useAuth();
+  const { isAdmin } = useApproval();
   const { savedProjects, loading: projectsLoading, currentProjectId, setCurrentProjectId, saveProject, deleteProject, generateShareLink, loadSharedProject } = useProjects(user);
   
   const [isGenerating, setIsGenerating] = useState(false);
@@ -363,34 +363,6 @@ export default function ClassicStudio() {
     toast.info(t.toastConnectProvider(providerId));
   }, [t]);
 
-  if (!authLoading && !user) {
-    return <Navigate to="/auth" replace state={{ from: location.pathname }} />;
-  }
-
-  if (authLoading || approvalLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center h-screen bg-background gap-5">
-        <div className="relative">
-          <div className="absolute inset-0 bg-primary/8 rounded-2xl blur-2xl scale-[2] animate-pulse-glow" />
-          <div className="relative flex items-center justify-center w-14 h-14 rounded-2xl bg-primary/10 border border-primary/10">
-            <Film className="w-7 h-7 text-primary" />
-          </div>
-        </div>
-        <div className="flex flex-col items-center gap-1.5">
-          <div className="flex items-center gap-2">
-            <Loader2 className="w-3.5 h-3.5 animate-spin text-primary/60" />
-            <span className="text-sm font-display font-bold text-foreground">LogiTrainer Studio</span>
-          </div>
-          <span className="text-[10px] text-muted-foreground/40">Loading workspace...</span>
-        </div>
-      </div>
-    );
-  }
-
-  if (user && !isAdmin && isApproved === false) {
-    return <PendingApprovalScreen status="pending" onSignOut={signOut} />;
-  }
-
   const handleOnboardingComplete = () => {
     localStorage.setItem('logitrainer-onboarded', 'true');
     setShowOnboarding(false);
@@ -432,6 +404,7 @@ export default function ClassicStudio() {
         onGenerateAllAudios={handleGenerateAllAudios}
         lastSaved={lastSaved}
         isSaving={isSaving}
+        onExitToPro={onExitToPro}
       >
         {!hasProject && activeTab === 'dashboard' ? (
           <WelcomeScreen

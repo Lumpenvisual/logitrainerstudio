@@ -36,7 +36,9 @@ const trustBadges = [
 
 export default function Auth() {
   const location = useLocation();
-  const redirectTo = (location.state as { from?: string } | null)?.from || "/";
+  const authState = location.state as { from?: string; initialView?: "suite" } | null;
+  const redirectTo = authState?.from === "/classic" ? "/" : authState?.from || "/";
+  const redirectState = authState?.initialView === "suite" ? { initialView: "suite" as const } : undefined;
   const { user, loading, signIn, signUp, resetPassword } = useAuth();
   const [mode, setMode] = useState<AuthMode>('login');
   const [email, setEmail] = useState('');
@@ -63,7 +65,7 @@ export default function Auth() {
     );
   }
 
-  if (user) return <Navigate to={redirectTo} replace />;
+  if (user) return <Navigate to={redirectTo} replace state={redirectState} />;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

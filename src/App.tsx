@@ -2,9 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { lazy, Suspense } from "react";
-import { BrowserRouter, Routes, Route, Outlet } from "react-router-dom";
-import { Loader2 } from "lucide-react";
+import { BrowserRouter, Routes, Route, Outlet, Navigate } from "react-router-dom";
 import { TunnelRootRedirect } from "@/components/TunnelRootRedirect";
 import { I18nProvider } from "@/i18n/useI18n";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -19,17 +17,6 @@ import Auth from "./pages/Auth";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import Profile from "./pages/Profile";
-import { LanguageProvider } from "@/i18n/LanguageContext";
-
-const ClassicStudio = lazy(() => import("./pages/ClassicStudio"));
-
-function ClassicStudioLoading() {
-  return (
-    <div className="flex h-screen items-center justify-center bg-background">
-      <Loader2 className="h-8 w-8 animate-spin text-primary" />
-    </div>
-  );
-}
 
 const queryClient = new QueryClient();
 
@@ -55,16 +42,7 @@ const App = () => (
                   <Route path="/reset-password" element={<ResetPassword />} />
                   <Route path="/profile" element={<Profile />} />
                   <Route path="/about" element={<About />} />
-                  <Route
-                    path="/classic"
-                    element={
-                      <LanguageProvider>
-                        <Suspense fallback={<ClassicStudioLoading />}>
-                          <ClassicStudio />
-                        </Suspense>
-                      </LanguageProvider>
-                    }
-                  />
+                  <Route path="/classic" element={<Navigate to="/" replace state={{ initialView: "suite" }} />} />
                   <Route path="*" element={<NotFound />} />
                 </Route>
               </Routes>

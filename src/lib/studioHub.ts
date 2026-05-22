@@ -36,7 +36,6 @@ export interface TunnelProjectInfo {
 
 export interface HubLinks {
   appPrincipal: string;
-  classicStudio: string;
   demo: string;
   production: string;
   studioHub: string;
@@ -117,7 +116,6 @@ export function getHubLinks(): HubLinks {
 
   return {
     appPrincipal: `${origin}/`,
-    classicStudio: `${origin}/classic`,
     demo: `${origin}/demo`,
     production: PRODUCTION_APP_URL,
     studioHub: `${origin}/studio`,

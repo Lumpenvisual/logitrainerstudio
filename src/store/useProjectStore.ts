@@ -3,7 +3,7 @@ import { immer } from 'zustand/middleware/immer';
 import { temporal } from 'zundo';
 import { v4 as uuid } from 'uuid';
 
-export type ViewMode = 'architect' | 'studio' | 'timeline' | 'dashboard' | 'referrals' | 'marketing' | 'connectors' | 'scheduler' | 'email' | 'webhooks' | 'marketplace' | 'agents';
+export type ViewMode = 'architect' | 'studio' | 'timeline' | 'dashboard' | 'referrals' | 'marketing' | 'connectors' | 'scheduler' | 'email' | 'webhooks' | 'marketplace' | 'agents' | 'suite';
 export type AssetType = 'image' | 'audio' | 'video';
 export type AssetStatus = 'idle' | 'generating' | 'ready' | 'error';
 export type LogLevel = 'info' | 'success' | 'error' | 'warning';

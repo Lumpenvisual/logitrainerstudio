@@ -1,8 +1,8 @@
 # Auditoría profunda — LogiTrainer Studio
 
-**Fecha:** 2026-05-21  
-**Commit:** `main` (integración Rafael + Studio clásico + fixes auth/E2E)  
-**Producción:** https://logitrainerstudio.vercel.app
+**Fecha:** 2026-05-22 (sesión abierta — contexto refrescado)  
+**Commit remoto:** `eaf3ccb` — **working tree:** integración unificada Studio Pro (sin commit)  
+**Producción:** https://logitrainerstudio.vercel.app — aún sin deploy de la unificación
 
 ---
 
@@ -13,12 +13,12 @@
 | Secretos en repo | ✅ PASS |
 | APIs Gemini (7 edges) | ✅ PASS |
 | Build producción | ✅ PASS |
-| E2E Playwright (Vercel) | ✅ **13/13** |
-| E2E local (`:8080`) | ✅ **13/13** |
+| E2E Playwright (Vercel) | ⏳ Re-verificar tras deploy unificado |
+| E2E local (`:8080`) | ✅ **14/14** (integración suite en Pro) |
 | E2E túnel (`tunnel:verify`) | ✅ **7/7** + HTTP 200 |
 | Vitest | ✅ 1/1 |
 | Código obsoleto | ✅ Eliminados `basic.spec.ts`, `local-llm.spec.ts`, script duplicado `test:e2e:tunnel:quick` |
-| Fixes aplicados | ✅ Race `useAuth`, redirect `/auth` → `/classic`, E2E por chunk lazy |
+| Fixes aplicados | ✅ Suite en `Index` (`suite`), `/classic` redirect, `FolderGit2` hub, E2E `expectHomePath` |
 
 **Veredicto: operativo en producción.**
 

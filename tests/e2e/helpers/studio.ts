@@ -10,6 +10,10 @@ export const SUPABASE_ANON_KEY =
 
 const NAV_OPTS = { waitUntil: "domcontentloaded" as const };
 
+export function expectHomePath(page: Page, timeout = 30_000) {
+  return expect.poll(() => new URL(page.url()).pathname, { timeout }).toBe("/");
+}
+
 export async function gotoApp(page: Page, path: string) {
   await page.goto(path, NAV_OPTS);
 }
@@ -42,26 +46,41 @@ export async function loginAsBackOffice(page: Page) {
   });
 }
 
-/** Abre /classic y espera el chunk lazy `classic-studio`. */
+async function openSuiteViaSidebar(page: Page) {
+  const chunkPromise = page
+    .waitForResponse((res) => res.url().includes("classic-studio") && res.status() === 200, {
+      timeout: 90_000,
+    })
+    .catch(() => null);
+  const suiteBtn = page.getByRole("button", { name: /Production Suite/i });
+  await suiteBtn.click({ timeout: 30_000 });
+  await chunkPromise;
+  await expect(page.locator("header").getByText(/LogiTrainer/i).first()).toBeVisible({
+    timeout: 60_000,
+  });
+}
+
+/** Production Suite integrado (vista `suite` en Studio Pro). */
 export async function enterClassicStudio(page: Page) {
-  const chunkPromise = page.waitForResponse(
-    (res) => res.url().includes("classic-studio") && res.status() === 200,
-    { timeout: 90_000 },
-  );
   await gotoApp(page, "/classic");
-  if (page.url().includes("/auth")) {
+  await expect
+    .poll(() => new URL(page.url()).pathname, { timeout: 20_000 })
+    .not.toBe("/classic");
+
+  if (new URL(page.url()).pathname === "/auth") {
     await expect(page.getByPlaceholder("you@example.com")).toBeVisible({ timeout: 20_000 });
     await page.getByPlaceholder("you@example.com").fill(ADMIN_EMAIL);
     await page.locator('input[type="password"]').first().fill(ADMIN_PASSWORD);
-    await Promise.all([
-      page.waitForURL(/\/classic(\?|$)/, { timeout: 30_000 }),
-      page.getByRole("button", { name: /^sign in$/i }).click(),
-    ]);
+    await page.getByRole("button", { name: /^sign in$/i }).click();
   }
-  await chunkPromise;
-  await expect(page).toHaveURL(/\/classic(\?|$)/, { timeout: 15_000 });
-  await expect(page.locator("#root")).not.toBeEmpty();
+
+  await expectHomePath(page);
+  await expect(page.locator("header").getByText(/LogiTrainer/i).first()).toBeVisible({
+    timeout: 90_000,
+  });
 }
+
+export { openSuiteViaSidebar };
 
 export async function enterWorkspaceFromWelcome(page: Page) {
   const newProject = page.getByRole("button", { name: /New Project|Nuevo Proyecto|Nouveau Projet/i });

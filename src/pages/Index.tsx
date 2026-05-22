@@ -34,18 +34,29 @@ import { AgentCrewPanel } from '@/components/panels/AgentCrewPanel';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useAlertEngine } from '@/hooks/useAlertEngine';
 import { requestNotificationPermission } from '@/lib/notifications';
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
 import { useUndoRedo } from '@/hooks/useUndoRedo';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
+import { lazy, Suspense } from 'react';
 import { Loader2, Clock } from 'lucide-react';
+import type { ViewMode } from '@/store/useProjectStore';
 import { OnboardingTour } from '@/components/onboarding/OnboardingTour';
+import { LanguageProvider } from '@/i18n/LanguageContext';
+
+const ClassicStudioWorkspace = lazy(() =>
+  import('@/components/classic-studio/ClassicStudioWorkspace').then((m) => ({
+    default: m.ClassicStudioWorkspace,
+  })),
+);
 
 const Index = () => {
+  const location = useLocation();
+  const routeInitialView = (location.state as { initialView?: ViewMode } | null)?.initialView;
   const { user, loading, signOut } = useAuth();
   const { isApproved, isAdmin, loading: approvalLoading } = useApproval();
-  const { currentView, isChatOpen, scenes, selectedClipId, selectedTransitionId } = useProjectStore();
+  const { currentView, setView, isChatOpen, scenes, selectedClipId, selectedTransitionId } = useProjectStore();
   const { saveProject, listProjects, loadProject, deleteProject } = useProjects();
-  const [showWelcome, setShowWelcome] = useState(true);
+  const [showWelcome, setShowWelcome] = useState(() => !routeInitialView);
   const [imageLabSceneId, setImageLabSceneId] = useState<string | null>(null);
   const [showAPIPanel, setShowAPIPanel] = useState(false);
   const [showAlerts, setShowAlerts] = useState(false);
@@ -64,6 +75,24 @@ const Index = () => {
   useUndoRedo();
 
   useEffect(() => { requestNotificationPermission(); }, []);
+
+  useLayoutEffect(() => {
+    if (routeInitialView) {
+      setShowWelcome(false);
+      setView(routeInitialView);
+      window.history.replaceState({}, '', '/');
+      return;
+    }
+    if (user && sessionStorage.getItem('lts-pending-view') === 'suite') {
+      sessionStorage.removeItem('lts-pending-view');
+      setShowWelcome(false);
+      setView('suite');
+    }
+  }, [routeInitialView, setView, user]);
+
+  useEffect(() => {
+    if (currentView === 'suite') setShowWelcome(false);
+  }, [currentView]);
 
   useEffect(() => {
     if (user) { listProjects().then(setRecentProjects); }
@@ -114,7 +143,18 @@ const Index = () => {
     );
   }
 
-  if (!user) return <Navigate to="/auth" replace />;
+  if (!user) {
+    if (routeInitialView === 'suite') {
+      sessionStorage.setItem('lts-pending-view', 'suite');
+    }
+    return (
+      <Navigate
+        to="/auth"
+        replace
+        state={{ from: location.pathname, initialView: routeInitialView }}
+      />
+    );
+  }
 
   if (!isAdmin && !isApproved) {
     return (
@@ -139,6 +179,22 @@ const Index = () => {
         onLoadProject={handleLoadProject}
         onDeleteProject={handleDeleteProject}
       />
+    );
+  }
+
+  if (currentView === 'suite') {
+    return (
+      <LanguageProvider>
+        <Suspense
+          fallback={
+            <div className="flex h-screen items-center justify-center bg-background">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          }
+        >
+          <ClassicStudioWorkspace onExitToPro={() => setView('architect')} />
+        </Suspense>
+      </LanguageProvider>
     );
   }
 

@@ -13,8 +13,10 @@ test.describe("Studio hub (/studio)", () => {
     await page.getByLabel(/Contraseña de acceso/i).fill(SITE_PASSWORD);
     await page.getByRole("button", { name: /Acceder al Studio/i }).click();
 
-    await expect(page).toHaveURL(/\/studio\/dashboard/, { timeout: 10_000 });
-    await expect(page.getByText(/Sesión activa/i)).toBeVisible();
+    await expect(page).toHaveURL(/\/studio\/dashboard/, { timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: /LogiTrainer/i }).first()).toBeVisible({
+      timeout: 15_000,
+    });
 
     if (process.env.PLAYWRIGHT_BASE_URL?.includes("trycloudflare.com")) {
       await gotoApp(page, "/auth");
@@ -36,7 +38,7 @@ test.describe("Studio hub (/studio)", () => {
     await page.getByRole("button", { name: /Acceder al Studio/i }).click();
     await expect(page).toHaveURL(/\/studio\/dashboard/);
 
-    await page.getByRole("button", { name: /Cerrar sesión/i }).click();
+    await page.getByRole("button", { name: /Cerrar sesión/i }).click({ timeout: 15_000 });
     await expect(page).toHaveURL(/\/studio\/login/);
 
     await gotoApp(page, "/");

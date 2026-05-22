@@ -11,14 +11,15 @@ Todo vive en **`C:\proyectos\logitrainerstudio`**. El repo clonado era una varia
 | Ruta | Descripción |
 |------|-------------|
 | `/` | **Studio Pro** — Zustand, timeline, paneles marketing, hub Gemini |
-| `/classic` | **Studio clásico** — UI integrada del repo Rafael (tabs, DnD, ebooks, funnels, `videoRenderer`) |
+| `/` (vista **suite**) | **Production Suite** — UI Rafael integrada (tabs, DnD, ebooks, funnels, `videoRenderer`) |
+| `/classic` | Redirect → `/` con vista `suite` (compatibilidad) |
 | `/studio` | Hub de acceso unificado |
 | `/demo` | Demo promocional |
 
 ## Qué se integró del repo Rafael
 
 - `src/components/classic-studio/` — 52 componentes (editor, marketing, agentes)
-- `src/pages/ClassicStudio.tsx` — shell principal clásico
+- `src/components/classic-studio/ClassicStudioWorkspace.tsx` — suite integrada en Studio Pro
 - `src/hooks/classic/` — `useProject`, autosave, streaming, contenido generado
 - `src/services/classic/` — API adaptada a edge functions `ai-*` de este proyecto
 - `src/lib/videoRenderer.ts` — export de video en canvas
@@ -34,10 +35,10 @@ Todo vive en **`C:\proyectos\logitrainerstudio`**. El repo clonado era una varia
 
 ## Code splitting (Studio Pro)
 
-- `/classic` carga con `React.lazy` + `Suspense` (chunk `classic-studio` ~1.9 MB).
-- Bundle inicial de Studio Pro ~465 KB (sin clásico).
+- Vista `suite` en Studio Pro carga `ClassicStudioWorkspace` con `React.lazy` (chunk `classic-studio` ~1.9 MB).
+- Bundle inicial de Studio Pro ~465 KB (sin suite hasta abrirla).
 - `videoRenderer` en chunk `video-renderer` (export desde Studio Pro).
-- Navegación: sidebar Studio Pro → icono cuadrícula → `/classic`; header clásico → **Studio Pro** → `/`.
+- Sidebar: **Production Suite** | botón header **Studio Pro** vuelve a vista Architect.
 
 ## Desarrollo
 

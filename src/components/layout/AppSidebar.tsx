@@ -1,4 +1,3 @@
-import { Link } from 'react-router-dom';
 import { FileText, Clapperboard, Clock, Bot, Activity, Bell, BarChart3, Gift, Megaphone, Plug, CalendarDays, Mail, Webhook, Store, Sparkles, LayoutGrid } from 'lucide-react';
 import { useProjectStore, ViewMode } from '@/store/useProjectStore';
 import { useAlertStore } from '@/store/useAlertStore';
@@ -14,6 +13,7 @@ export function AppSidebar({ onToggleAlerts, isAlertsOpen }: { onToggleAlerts?: 
   const recentErrors = logs.filter((l) => l.level === 'error').length;
 
   const navItems: { view: ViewMode; icon: typeof FileText; label: string; sub: string }[] = [
+    { view: 'suite', icon: LayoutGrid, label: 'Production Suite', sub: 'Editor, marketing, ebooks, export' },
     { view: 'architect', icon: FileText, label: t('nav.architect'), sub: t('nav.architect.sub') },
     { view: 'studio', icon: Clapperboard, label: t('nav.studio'), sub: t('nav.studio.sub') },
     { view: 'timeline', icon: Clock, label: t('nav.timeline'), sub: t('nav.timeline.sub') },
@@ -45,6 +45,9 @@ export function AppSidebar({ onToggleAlerts, isAlertsOpen }: { onToggleAlerts?: 
             <Tooltip key={view} delayDuration={200}>
               <TooltipTrigger asChild>
                 <button
+                  type="button"
+                  aria-label={label}
+                  aria-current={active ? 'page' : undefined}
                   onClick={() => setView(view)}
                   className={cn(
                     'group relative flex h-9 w-9 items-center justify-center rounded-lg transition-all duration-200',
@@ -75,21 +78,6 @@ export function AppSidebar({ onToggleAlerts, isAlertsOpen }: { onToggleAlerts?: 
       {/* Bottom actions */}
       <div className="flex flex-col gap-1">
         <div className="w-5 h-px bg-border/50 mb-1" />
-
-        <Tooltip delayDuration={200}>
-          <TooltipTrigger asChild>
-            <Link
-              to="/classic"
-              className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground/50 transition-all duration-200 hover:bg-secondary/40 hover:text-foreground"
-            >
-              <LayoutGrid className="h-[17px] w-[17px]" />
-            </Link>
-          </TooltipTrigger>
-          <TooltipContent side="right" sideOffset={8} className="font-display bg-card border-border shadow-premium">
-            <p className="font-semibold text-xs">Studio clásico</p>
-            <p className="text-[10px] text-muted-foreground">Editor Lovable completo</p>
-          </TooltipContent>
-        </Tooltip>
 
         <Tooltip delayDuration={200}>
           <TooltipTrigger asChild>
