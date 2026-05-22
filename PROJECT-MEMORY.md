@@ -57,4 +57,19 @@ npm run verify:prod   # 14 E2E + APIs
 
 ---
 
+## Skills Cursor (6)
+
+Índice: `.cursor/skills/README.md` · Resumen: `docs/SKILLS-LEARNED.md`
+
+| Skill | Tema |
+|-------|------|
+| `lts-studio-hub` | Login, túnel, hub |
+| `lts-e2e-verification` | 14 E2E, verify:prod |
+| `lts-supabase-backend` | DB, functions, secrets |
+| `lts-edge-client` | edgeClient + aiService |
+| `lts-gemini-api` | Gemini en edge |
+| `lts-demo` | `/demo` público |
+
+---
+
 *Ver `AUDIT-REPORT.md` para última auditoría completa.*

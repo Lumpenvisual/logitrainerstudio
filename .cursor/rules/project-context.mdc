@@ -74,6 +74,11 @@ alwaysApply: true
 
 - `/demo` público — `public/demo/logitrainer/` — `npm run demo:generate`
 
-## Skills
+## Skills (6 en `.cursor/skills/` — resumen en `docs/SKILLS-LEARNED.md`)
 
-`lts-supabase-backend`, `lts-edge-client`, `lts-gemini-api`, `lts-e2e-verification`, `lts-demo`, `lts-studio-hub`
+- `lts-studio-hub` — login unificado, túnel, hub
+- `lts-e2e-verification` — 14 Playwright, verify:prod
+- `lts-supabase-backend` — zghzhfheyawvbdddsybe, migrations, seed
+- `lts-edge-client` — callEdge / fetchEdgeStream only
+- `lts-gemini-api` — GEMINI_API_KEY en Secrets
+- `lts-demo` — /demo sin gate

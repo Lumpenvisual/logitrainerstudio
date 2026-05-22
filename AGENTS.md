@@ -1,83 +1,73 @@
 # LogiTrainer Studio — guía para agentes
 
-Agencia audiovisual automatizada: guion por escenas, assets, timeline, marketing y agentes IA.
+Agencia audiovisual automatizada: guion por escenas, assets, timeline, marketing y agentes IA. **Una app** en `/` (Studio Pro + Production Suite integrada).
 
 ## Inicio rápido
 
 ```powershell
 cd c:\proyectos\logitrainerstudio
 npm install
-npm run dev
+npm start          # :8080
 ```
 
 **Producción:** https://logitrainerstudio.vercel.app  
-**Login unificado:** `/studio` — contraseña `LTS-Mayo2026-7kQ!`  
-**Túnel local:** `npm run publish:trycloudflare` → `TRYCLOUDFLARE-URL.txt`  
-**Supabase:** `zghzhfheyawvbdddsybe` (no usar Lovable `bcobgfxepxmmcheuliai`)  
-**Memoria:** `PROJECT-MEMORY.md` | **Auditoría:** `AUDIT-REPORT.md`
+**Login unificado:** https://logitrainerstudio.vercel.app/studio/login  
+**Cuenta:** `backoffice@logitrainerstudio.app` / `LTS-Mayo2026-7kQ!`  
+**Supabase:** `zghzhfheyawvbdddsybe`  
+**Memoria:** `PROJECT-MEMORY.md` | **Skills:** `docs/SKILLS-LEARNED.md` | **Auditoría:** `AUDIT-REPORT.md`
 
-## Verificación obligatoria tras cambios de backend/IA
+## Verificación obligatoria tras cambios
 
 ```powershell
-npm run audit:lts      # secrets + APIs + build
-npm run verify:prod    # audit + Playwright producción (10 tests)
-npm run tunnel:verify  # E2E vía túnel trycloudflare (4 tests)
-npm run demo:generate  # video demo LogiTrainer → public/demo/logitrainer/
+npm run audit:lts
+npm run verify:prod    # 14 E2E + APIs
+npm run tunnel:verify
+npm run demo:generate
 ```
-
-Demo en app: `/demo` (reproductor + escenas + features).
 
 ## Dónde tocar código
 
 | Tarea | Archivos |
 |-------|----------|
-| UI principal / vistas | `src/pages/Index.tsx`, `src/components/views/*` |
-| Estado del proyecto | `src/store/useProjectStore.ts` |
-| Auth / aprobación | `src/hooks/useAuth.tsx`, `useApproval.ts` |
-| IA cliente | `src/services/aiService.ts` |
-| HTTP edge (sin ISO-8859-1) | `src/lib/edgeClient.ts`, `supabaseHttp.ts` |
-| Contexto copilot | `src/lib/studioContext.ts` |
+| App shell / suite | `src/pages/Index.tsx`, `ClassicStudioWorkspace.tsx` |
+| Login unificado | `UnifiedLoginScreen.tsx`, `useUnifiedLogin.ts`, `unifiedCredentials.ts` |
+| Hub / gate | `StudioHub.tsx`, `SiteAccessGuard.tsx`, `studioHub.ts` |
+| Estado Pro | `src/store/useProjectStore.ts` |
+| IA cliente | `src/services/aiService.ts`, `src/lib/edgeClient.ts` |
 | Edge Functions | `supabase/functions/*/index.ts` |
 | E2E | `tests/e2e/*.spec.ts`, `helpers/studio.ts` |
 
 ## APIs IA (Gemini vía Supabase Edge)
 
-Todas pasan por `aiService.ts` → `callEdge` / `fetchEdgeStream`:
-
 | Función edge | Uso en UI |
 |--------------|-----------|
-| `ai-generate-script` | Architect → Generate Script |
-| `ai-chat` | ChatPanel copilot (SSE) |
+| `ai-generate-script` | Architect |
+| `ai-chat` | ChatPanel (SSE) |
 | `ai-generate-image` | Studio / Image Lab |
-| `ai-analyze-image` | Análisis de imagen |
-| `ai-marketing-content` | Vista Marketing |
+| `ai-analyze-image` | Visión |
+| `ai-marketing-content` | Marketing |
 | `ai-email-sequence` | Email Builder |
 | `agent-orchestrator` | Agent Crew |
 
-**Secret:** `GEMINI_API_KEY` solo en Supabase Secrets (nunca en el repo).
+**Secret:** `GEMINI_API_KEY` solo en Supabase Secrets.
 
-## Credenciales de prueba (producción)
+## Skills Cursor (guardados en `.cursor/skills/`)
 
-| Uso | Valor |
-|-----|--------|
-| Hub `/studio` | `LTS-Mayo2026-7kQ!` (env `STUDIO_ACCESS_PASSWORD`) |
-| Back-office | `backoffice@logitrainerstudio.app` / `LTS-BackOffice-2026!mX` |
-| Seed admin | `npm run seed:back-office` |
+| Skill | Tema |
+|-------|------|
+| `lts-studio-hub` | `/studio`, túnel, login unificado |
+| `lts-e2e-verification` | Playwright 14 tests, verify:prod |
+| `lts-supabase-backend` | Migraciones, functions, back-office |
+| `lts-edge-client` | edgeClient, aiService |
+| `lts-gemini-api` | Gemini _shared/gemini.ts |
+| `lts-demo` | `/demo`, demo:generate |
 
-## Skills Cursor
-
-- `lts-supabase-backend` — Supabase, migraciones, deploy functions
-- `lts-edge-client` — `edgeClient.ts`, sin ISO-8859-1
-- `lts-gemini-api` — `GEMINI_API_KEY` solo en Secrets
-- `lts-e2e-verification` — `verify:prod`, Playwright
-- `lts-demo` — video promo, `/demo`, `demo:generate`
-- `lts-studio-hub` — `/studio`, túnel, `publish:trycloudflare`
+Índice: `.cursor/skills/README.md` · Resumen aprendido: `docs/SKILLS-LEARNED.md`
 
 Reglas: `.cursor/rules/project-context.mdc`, `lts-backend.mdc`
 
 ## Reglas
 
 - Cambios mínimos; no refactors amplios no pedidos
-- `npm run build` antes de cerrar cambios grandes
-- Variables `VITE_*` requieren redeploy en Vercel
-- Rotar claves si se exponen en chat
+- No commitear secretos
+- Tras backend/IA: `verify:prod` antes de cerrar tarea
