@@ -10,8 +10,9 @@ alwaysApply: true
 - **Código canónico:** `C:\proyectos\logitrainerstudio`
 - **GitHub:** https://github.com/Lumpenvisual/logitrainerstudio
 - **Memoria humana:** `PROJECT-MEMORY.md` | **Auditoría:** `AUDIT-REPORT.md` | **Integración suite:** `docs/INTEGRATION-RAFAEL-REPO.md`
-- **Git:** `main` @ `eaf3ccb` — integración unificada en working tree (**sin commit**)
+- **Git:** `main` @ `1db87f1` — deploy unificado en prod (2026-05-22)
 - **Dev:** `npm start` → http://localhost:8080
+- **Verify:** `npm run verify:prod` → 14/14 @ logitrainerstudio.vercel.app
 
 ## Despliegue
 
