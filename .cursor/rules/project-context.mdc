@@ -12,7 +12,7 @@ alwaysApply: true
 - **Memoria humana:** `PROJECT-MEMORY.md` | **Auditoría:** `AUDIT-REPORT.md` | **Integración suite:** `docs/INTEGRATION-RAFAEL-REPO.md`
 - **Git:** `main` @ `1db87f1` — deploy unificado en prod (2026-05-22)
 - **Dev:** `npm start` → http://localhost:8080
-- **Verify:** `npm run verify:prod` → 14/14 @ logitrainerstudio.vercel.app
+- **Verify (2026-05-22):** `verify:prod` 14/14 · local 14/14 · `audit:lts` OK · `tunnel:verify` 8/8 + HTTP 200
 
 ## Despliegue
 

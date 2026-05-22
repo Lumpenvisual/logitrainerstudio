@@ -1,25 +1,24 @@
 # Memoria del proyecto — LogiTrainer Studio
 
-**Última actualización:** 2026-05-22 — deploy unificado verificado en prod  
+**Última actualización:** 2026-05-22 — auditoría E2E completa OK  
 **Repo:** https://github.com/Lumpenvisual/logitrainerstudio  
 **Carpeta local:** `C:\proyectos\logitrainerstudio`  
-**Git:** `main` @ `1db87f1` — sincronizado con `origin/main` y Vercel prod
+**Git:** `main` @ `53b8427` — limpio, sincronizado con `origin/main`
 
 ---
 
 ## Qué es
 
-Plataforma audiovisual con IA (Vite + React + Supabase + Gemini). **Un solo despliegue** en Vercel: Studio Pro en `/` con **Production Suite** integrada (vista `suite`, lazy `classic-studio`).
+Plataforma audiovisual con IA (Vite + React + Supabase + Gemini). **Un solo despliegue** en Vercel: Studio Pro en `/` con **Production Suite** integrada (vista `suite`).
 
-## Rutas (una app)
+## Rutas
 
 | Ruta | Descripción |
 |------|-------------|
-| `/` | Studio Pro + vista `suite` (Production Suite) |
+| `/` | Studio Pro + vista `suite` (Production Suite, lazy) |
 | `/classic` | Redirect → `/` con `initialView: "suite"` |
-| `/studio` | Hub acceso unificado — tarjeta “LogiTrainer Studio” |
+| `/studio` | Hub acceso unificado |
 | `/demo` | Demo pública (sin site gate) |
-| `/auth`, `/profile`, `/about` | Tras site gate |
 
 ## URLs
 
@@ -27,8 +26,8 @@ Plataforma audiovisual con IA (Vite + React + Supabase + Gemini). **Un solo desp
 |----------|-----|
 | **Producción** | https://logitrainerstudio.vercel.app |
 | Hub | `/studio` |
-| Production Suite | Sidebar **Production Suite** o `/classic` |
 | Supabase | `zghzhfheyawvbdddsybe` |
+| Túnel quick (efímero) | `TRYCLOUDFLARE-URL.txt` o `npm run publish:trycloudflare` |
 
 ## Credenciales (pruebas)
 
@@ -37,50 +36,38 @@ Plataforma audiovisual con IA (Vite + React + Supabase + Gemini). **Un solo desp
 | Hub / site gate | `LTS-Mayo2026-7kQ!` |
 | Back-office | `backoffice@logitrainerstudio.app` / `LTS-BackOffice-2026!mX` |
 
-## Comandos esenciales
+## Comandos de verificación
 
 ```powershell
-cd C:\proyectos\logitrainerstudio
-npm start                    # :8080
-npm run build
-npm run verify:prod          # secrets + APIs + 14 E2E @ Vercel
-npm run audit:lts
-npx vercel deploy --prod --yes
+npm run verify:prod      # prod: secrets + APIs + 14 E2E
+npm run audit:lts        # secrets + APIs + build
+npm run tunnel:verify    # HTTP túnel + 8 E2E (arranca quick tunnel si hace falta)
+# Local: npm start → :8080 → npx playwright test
 ```
 
-## Arquitectura unificada
-
-| Pieza | Ubicación |
-|-------|-----------|
-| Shell | `src/pages/Index.tsx` — `currentView === 'suite'` → `ClassicStudioWorkspace` |
-| Suite | `src/components/classic-studio/ClassicStudioWorkspace.tsx` |
-| Sidebar | `AppSidebar` — botón Production Suite |
-| Salir suite | `StudioLayout` → `onExitToPro` |
-| Auth suite | `Auth.tsx` + `sessionStorage` `lts-pending-view` |
-| Chunk lazy | `classic-studio` (~1.9 MB gzip ~544 KB) |
-
-## Verificación (2026-05-22)
+## Última auditoría E2E (2026-05-22)
 
 | Check | Resultado |
 |-------|-----------|
-| Build local | OK |
+| `verify:prod` | **14/14** + APIs OK |
 | E2E local `:8080` | **14/14** |
-| `verify:prod` | **14/14** + APIs Gemini OK |
 | `audit:lts` | OK |
-| Deploy Vercel | `1db87f1` → https://logitrainerstudio.vercel.app |
+| `npm test` (Vitest) | 1/1 |
+| `tunnel:verify` | HTTP 200 + **8/8** |
 
-## Commit clave
+## Arquitectura
 
-`1db87f1` — *Unify Production Suite into Studio Pro single deploy.*
-
-## Hub en Vercel
-
-En prod el host es `.vercel.app`: la tarjeta app principal puede mostrar aviso “usa túnel”; la app unificada sigue en `/` tras site gate + Supabase.
+| Pieza | Ubicación |
+|-------|-----------|
+| Shell | `src/pages/Index.tsx` |
+| Suite | `src/components/classic-studio/ClassicStudioWorkspace.tsx` |
+| Sidebar | `AppSidebar` — Production Suite |
+| Commits clave | `1db87f1` (unificación), `53b8427` (docs verificación) |
 
 ## Documentación
 
-`AGENTS.md` · `AUDIT-REPORT.md` · `docs/INTEGRATION-RAFAEL-REPO.md` · `.cursor/rules/project-context.mdc`
+`AUDIT-REPORT.md` · `docs/INTEGRATION-RAFAEL-REPO.md` · `.cursor/rules/project-context.mdc` · `AGENTS.md`
 
 ---
 
-*Actualizar tras cambios mayores o nueva verificación completa.*
+*Actualizar tras cambios mayores o nueva auditoría.*
