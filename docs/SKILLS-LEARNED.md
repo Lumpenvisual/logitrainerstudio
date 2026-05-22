@@ -1,6 +1,7 @@
 # Skills aprendidos — LogiTrainer Studio
 
-Resumen consolidado de los 6 skills en `.cursor/skills/`. Actualizado tras unificación de login y deploy único.
+Resumen consolidado de los 6 skills en `.cursor/skills/`.  
+**Proyecto guardado:** `main` @ `ec1f0bb` · Prod: https://logitrainerstudio.vercel.app
 
 ---
 

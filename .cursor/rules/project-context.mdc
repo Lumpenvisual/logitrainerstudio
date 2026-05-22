@@ -7,78 +7,47 @@ alwaysApply: true
 
 ## Ubicación y repos
 
-- **Código canónico:** `C:\proyectos\logitrainerstudio`
+- **Código:** `C:\proyectos\logitrainerstudio`
 - **GitHub:** https://github.com/Lumpenvisual/logitrainerstudio
-- **Memoria humana:** `PROJECT-MEMORY.md` | **Auditoría:** `AUDIT-REPORT.md` | **Integración suite:** `docs/INTEGRATION-RAFAEL-REPO.md`
-- **Git:** `main` @ `1db87f1` — deploy unificado en prod (2026-05-22)
+- **Git:** `main` @ `ec1f0bb` — sincronizado con `origin/main`
+- **Memoria:** `PROJECT-MEMORY.md` | **Auditoría:** `AUDIT-REPORT.md` | **Skills:** `docs/SKILLS-LEARNED.md`
+
+## Producción y dev
+
+- **URL:** https://logitrainerstudio.vercel.app
+- **Login:** `/studio/login`
 - **Dev:** `npm start` → http://localhost:8080
-- **Verify (2026-05-22):** `verify:prod` 14/14 · local 14/14 · `audit:lts` OK · `tunnel:verify` 8/8 + HTTP 200
+- **Verify:** `npm run verify:prod` (14 E2E + APIs)
 
-## Despliegue
+## Cuenta unificada
 
-- **Producción:** https://logitrainerstudio.vercel.app
-- **Deploy:** `npx vercel deploy --prod --yes`
-- **SPA:** `vercel.json` rewrites a `index.html`
+| Campo | Valor |
+|-------|--------|
+| Correo | `backoffice@logitrainerstudio.app` |
+| Contraseña | `LTS-Mayo2026-7kQ!` |
 
-## Rutas principales (una app)
+`unifiedCredentials.ts` · `UnifiedLoginScreen` · `useUnifiedLogin` · `/auth` → `/studio/login`
 
-| Ruta | Comportamiento |
-|------|----------------|
-| `/` | Studio Pro + vista `suite` (Production Suite, lazy `classic-studio`) |
-| `/classic` | Redirect → `/` con `initialView: "suite"` (no página aparte) |
-| `/studio` | Hub login/dashboard — tarjeta única “LogiTrainer Studio” |
-| `/demo` | Demo pública (sin site gate) |
+## Rutas (una app)
 
-## Production Suite (integrada)
+| Ruta | Uso |
+|------|-----|
+| `/` | Studio Pro + vista `suite` (Production Suite) |
+| `/classic` | Redirect → `/` con suite |
+| `/studio` | Hub |
+| `/demo` | Público, sin gate |
 
-- Componente: `ClassicStudioWorkspace.tsx` en `src/components/classic-studio/`
-- Activación: `useProjectStore` → `setView('suite')` o redirect `/classic`
-- Salir: `StudioLayout` `onExitToPro` → vista `architect`
-- Sidebar: botón **Production Suite** (`aria-label`), no `Link` a `/classic`
-- Auth: `Auth.tsx` pasa `initialView: "suite"`; `Index` usa `sessionStorage` `lts-pending-view` como respaldo
+## Arquitectura
 
-## Acceso unificado `/studio`
+- Suite: `ClassicStudioWorkspace.tsx`, `setView('suite')`, sidebar Production Suite
+- IA: `edgeClient.ts` → `aiService.ts` (no `functions.invoke`)
+- Supabase: `zghzhfheyawvbdddsybe`
+- E2E: `tests/e2e/helpers/studio.ts` → `unifiedLogin()`
 
-- **Cuenta unificada:** `backoffice@logitrainerstudio.app` / `LTS-Mayo2026-7kQ!` — `/studio/login` (`UnifiedLoginScreen`, `unifiedCredentials.ts`)
-- Rutas: `/studio`, `/studio/login`, `/studio/dashboard`
-- `SiteAccessGuard` redirige a `/studio/login` si no hay sesión
-- Hub → `/` requiere login Supabase en `/auth` además del site gate
+## Skills (6)
 
-## Túnel localhost:8080
+`lts-studio-hub` · `lts-e2e-verification` · `lts-supabase-backend` · `lts-edge-client` · `lts-gemini-api` · `lts-demo`
 
-- Quick Tunnel: `npm run publish:trycloudflare` | URL: `TRYCLOUDFLARE-URL.txt`
-- Verificación: `npm run tunnel:verify` (HTTP + 7 E2E en `:8080`)
-- Sin ventanas cmd: `npm run tunnel:silence` | Desactivar: `npm run tunnel:disable`
-- E2E local: **siempre** `http://127.0.0.1:8080` (`npm start`)
+## Comandos
 
-## Supabase (propietario)
-
-- **Project ref:** `zghzhfheyawvbdddsybe`
-- **Secrets:** `GEMINI_API_KEY` (no en repo)
-- **Functions:** `ai-generate-script`, `ai-generate-image`, `ai-generate-audio`, `ai-chat`, `generate-music`, etc.
-- **Deploy:** `npx supabase functions deploy <name> --project-ref zghzhfheyawvbdddsybe`
-
-## IA
-
-- Gemini nativo: `supabase/functions/_shared/gemini.ts`
-- Studio Pro: `aiService.ts` + `edgeClient.ts`
-- Production Suite: `src/services/classic/apiService.ts`
-- Smoke: `npm run test:ai-apis` | E2E prod: `npm run verify:prod` | Local: 14 tests en `tests/e2e/`
-
-## Auth back-office
-
-- Misma cuenta que hub: `backoffice@logitrainerstudio.app` / `LTS-Mayo2026-7kQ!` — `npm run sync:unified-password` para alinear Supabase
-- Tras hub: `/auth` — helpers en `tests/e2e/helpers/studio.ts` (`passSiteGate`, `enterClassicStudio`, `expectHomePath`)
-
-## Demo
-
-- `/demo` público — `public/demo/logitrainer/` — `npm run demo:generate`
-
-## Skills (6 en `.cursor/skills/` — resumen en `docs/SKILLS-LEARNED.md`)
-
-- `lts-studio-hub` — login unificado, túnel, hub
-- `lts-e2e-verification` — 14 Playwright, verify:prod
-- `lts-supabase-backend` — zghzhfheyawvbdddsybe, migrations, seed
-- `lts-edge-client` — callEdge / fetchEdgeStream only
-- `lts-gemini-api` — GEMINI_API_KEY en Secrets
-- `lts-demo` — /demo sin gate
+`audit:lts` · `verify:prod` · `sync:unified-password` · `tunnel:verify` · `npx vercel deploy --prod --yes`
